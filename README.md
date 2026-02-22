@@ -97,3 +97,4 @@ CREATE TABLE api_keys (
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 ```
+# ApiMAnager
