@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | KeyVault Pro</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <!-- Persistent Sidebar -->
+        <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-logo" style="margin-bottom: 2rem;">
+                <div class="logo-container">
+                    <div class="app-logo"></div>
+                    <span class="logo-text">KeyVault</span>
+                </div>
+            </div>
+
+            <nav style="flex: 1;">
+                <a href="dashboard.html" class="btn btn-ghost"
+                    style="width: 100%; justify-content: flex-start; background: var(--bg-muted); color: var(--text-main);">
+                    <i class="fa-solid fa-grid-2"></i> Dashboard
+                </a>
+                <a href="teams.html" class="btn btn-ghost" style="width: 100%; justify-content: flex-start;">
+                    <i class="fa-solid fa-users"></i> Teams
+                </a>
+            </nav>
+
+            <div class="sidebar-footer" style="border-top: 1px solid var(--border-base); padding-top: 1.5rem;">
+                <div id="user-info" style="margin-bottom: 1rem;">
+                    <div id="user-email-display"
+                        style="font-size: 0.825rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        user@example.com</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Administrator</div>
+                </div>
+                <button id="logout-btn" class="btn btn-ghost"
+                    style="width: 100%; justify-content: flex-start; padding: 0.5rem 0;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign out
+                </button>
+            </div>
+        </aside>
+
+        <div class="main-wrapper">
+            <!-- Header Bar -->
+            <header class="top-nav">
+                <div style="flex: 1;">
+                    <nav aria-label="Breadcrumb">
+                        <ol
+                            style="list-style: none; display: flex; gap: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
+                            <li>Organization</li>
+                            <li>/</li>
+                            <li style="color: var(--text-main); font-weight: 500;">Workspaces</li>
+                        </ol>
+                    </nav>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="content-area fade-in">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem;">
+                    <div>
+                        <h1>Projects</h1>
+                        <p class="text-muted">Manage your API keys across different environments and services.</p>
+                    </div>
+                    <button id="new-project-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i> New Project
+                    </button>
+                </div>
+
+                <!-- Metrics Dashboard -->
+                <section class="stats-grid" aria-label="Project Statistics">
+                    <div class="stat-box">
+                        <div class="stat-label">Total Projects</div>
+                        <div id="stat-projects" class="stat-value">--</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Managed Keys</div>
+                        <div id="stat-keys" class="stat-value">--</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(239, 68, 68, 0.2);">
+                        <div class="stat-label" style="color: var(--error);">Expiring Soon</div>
+                        <div id="stat-expiring" class="stat-value" style="color: var(--error);">0</div>
+                    </div>
+                </section>
+
+                <!-- Search & Filters -->
+                <div class="form-group" style="max-width: 400px; margin-bottom: 2rem; position: relative;">
+                    <i class="fa-solid fa-magnifying-glass"
+                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary);"></i>
+                    <input type="text" id="project-search" class="input" placeholder="Search projects..."
+                        style="padding-left: 2.5rem;">
+                </div>
+
+                <!-- Projects Display Area -->
+                <div id="project-list" class="project-grid">
+                    <!-- Project cards will be injected by dashboard.js -->
+                    <div
+                        style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px dashed var(--border-base); border-radius: var(--radius-xl); opacity: 0.6;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>Scanning for active projects...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals (Preserved IDs) -->
+    <div class="modal-overlay" id="project-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">New Project</h2>
+                <button id="close-modal" class="btn btn-ghost" style="padding: 0.5rem;" aria-label="Close modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="project-form">
+                <div class="form-group">
+                    <label for="project-name" class="label">Project Name</label>
+                    <input type="text" id="project-name" class="input" placeholder="e.g. Acme API" required>
+                </div>
+                <div class="form-group">
+                    <label for="project-tag" class="label">Tag / Label</label>
+                    <input type="text" id="project-tag" class="input" placeholder="e.g. Production">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" id="cancel-project" class="btn btn-ghost">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

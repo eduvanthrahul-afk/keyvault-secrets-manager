@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyVault | Secure Zero-Knowledge API Key Management</title>
+    <link rel="stylesheet" href="css/landing.css">
+    <meta name="description"
+        content="Manage your API keys with zero-knowledge encryption. Keys are encrypted client-side and never leave your browser unencrypted.">
+</head>
+
+<body>
+    <!-- Cursor Glow -->
+    <div class="cursor-glow" id="glow"></div>
+
+    <!-- Navbar -->
+    <header class="nav-container">
+        <a href="landing.html" class="nav-brand">
+            <div class="brand-icon">K</div>
+            <span>KeyVault</span>
+        </a>
+        <nav class="nav-links">
+            <a href="login.html" class="btn btn-ghost">Sign In</a>
+            <a href="register.html" class="btn btn-primary">Create Vault</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="reveal active">
+            <span class="badge">Zero-Knowledge Architecture</span>
+            <h1>Bank-grade security<br>for your API keys.</h1>
+            <p>Stop storing secrets in plain text. KeyVault encrypts everything locally before it ever reaches our
+                servers. You hold the only master key.</p>
+            <div style="display: flex; gap: 1.5rem; justify-content: center;">
+                <a href="register.html" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1rem;">Get
+                    Started Free</a>
+                <a href="#security" class="btn btn-ghost"
+                    style="padding: 1rem 2rem; border: 1px solid var(--glass-border);">Security Details</a>
+            </div>
+        </div>
+
+        <!-- CSS Animated Mockup -->
+        <div class="dashboard-mockup reveal">
+            <div class="mockup-header">
+                <div class="dot dot-r"></div>
+                <div class="dot dot-y"></div>
+                <div class="dot dot-g"></div>
+            </div>
+            <div class="mockup-grid">
+                <div class="sidebar-sim">
+                    <div
+                        style="width: 80%; height: 20px; background: rgba(255,255,255,0.05); margin-bottom: 2rem; border-radius: 4px;">
+                    </div>
+                    <div
+                        style="width: 60%; height: 15px; background: rgba(255,255,255,0.03); margin-bottom: 1rem; border-radius: 4px;">
+                    </div>
+                    <div
+                        style="width: 70%; height: 15px; background: rgba(255,255,255,0.03); margin-bottom: 1rem; border-radius: 4px;">
+                    </div>
+                </div>
+                <div class="content-sim">
+                    <div class="stat-card-sim"></div>
+                    <div class="stat-card-sim"></div>
+                    <div class="stat-card-sim"></div>
+                    <div class="huge-card-sim">
+                        ENCRYPTED_VAULT_ACTIVE: [AES-256-GCM] - SHA-256 SALT ATTACHED
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section-features" id="features">
+        <div class="feat-grid">
+            <div class="feat-card reveal">
+                <span class="feat-icon">�</span>
+                <h3>True Zero-Knowledge</h3>
+                <p>We use PBKDF2 with 100,000+ iterations to derive your key locally. Your master password never touches
+                    the cloud—period.</p>
+            </div>
+            <div class="feat-card reveal">
+                <span class="feat-icon">⚡</span>
+                <h3>Developer Velocity</h3>
+                <p>Quickly access, copy, and organize keys across projects. No more hunting through .env files or
+                    post-it notes.</p>
+            </div>
+            <div class="feat-card reveal">
+                <span class="feat-icon">🛡️</span>
+                <h3>Expiry Protection</h3>
+                <p>Set expiry dates for sensitive service tokens and get notified via encrypted email alerts 7 days
+                    before they expire.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Security Spotlight -->
+    <section class="encryption-section" id="security">
+        <div class="enc-content reveal">
+            <h2 style="font-size: 3.5rem; margin-bottom: 2rem; line-height: 1.1;">Privacy isn't a feature.<br>It's the
+                foundation.</h2>
+            <p style="color: var(--text-muted); margin-bottom: 3rem; font-size: 1.1rem;">
+                KeyVault leverages the <strong>Web Crypto API</strong> to handle cryptographic operations directly in
+                your browser's secure context. Your data is scrambled before transit, ensuring that even if our database
+                was public, your secrets remain safe.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div style="border-left: 2px solid var(--acc-primary); padding-left: 1.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: 800;">AES-GCM</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Authentic Encryption</p>
+                </div>
+                <div style="border-left: 2px solid var(--acc-secondary); padding-left: 1.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: 800;">12-byte</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Random IV Per Key</p>
+                </div>
+            </div>
+        </div>
+        <div class="enc-visual reveal">
+            <div class="orb"></div>
+            <div class="glass-lock">
+                <div style="font-size: 5rem; margin-bottom: 1rem;">�️</div>
+                <div style="font-family: monospace; font-size: 0.7rem; color: var(--acc-primary); opacity: 0.8;">
+                    ENCRYPTING_DATA...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="cta-section">
+        <div class="cta-box reveal">
+            <h2 style="font-size: 4rem; margin-bottom: 2rem; font-weight: 800; letter-spacing: -2px;">Secure your stack
+                today.</h2>
+            <p style="color: var(--text-muted); margin-bottom: 3rem; font-size: 1.25rem;">Free for individuals.
+                Encrypted for everyone.</p>
+            <a href="register.html" class="btn btn-primary"
+                style="padding: 1.5rem 4rem; font-size: 1.1rem; border-radius: 20px;">Protect My Keys</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+            <div class="brand-icon" style="width: 24px; height: 24px; font-size: 0.7rem; border-radius: 6px;">K</div>
+            KeyVault
+        </div>
+        <div style="display: flex; gap: 2rem;">
+            <a href="#" style="color: inherit; text-decoration: none;">Security Audit</a>
+            <a href="#" style="color: inherit; text-decoration: none;">Privacy Policy</a>
+        </div>
+        <div>&copy; 2026 KeyVault Systems.</div>
+    </footer>
+
+    <script>
+        // Cursor Glow Follower
+        const glow = document.getElementById('glow');
+        window.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // Intersection Observer for Reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Smooth Scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
