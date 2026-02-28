@@ -49,7 +49,7 @@ const CryptoModule = {
     async encrypt(plaintext, key) {
         const encoder = new TextEncoder();
         const iv = crypto.getRandomValues(new Uint8Array(12));
-        
+
         const ciphertextBuffer = await crypto.subtle.encrypt(
             { name: this.ALGO, iv: iv },
             key,
@@ -85,6 +85,57 @@ const CryptoModule = {
             console.error("Decryption failed", e);
             throw new Error("Failed to decrypt. Possible wrong password or corrupted data.");
         }
+    },
+
+    /**
+     * Stores a derived key in IndexedDB (extractable: false) for secure session management.
+     * @param {CryptoKey} key 
+     */
+    async saveSessionKey(key) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('KeyVaultSession', 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('session')) {
+                    db.createObjectStore('session');
+                }
+            };
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction('session', 'readwrite');
+                tx.objectStore('session').put(key, 'current_key');
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(new Error("Failed to save session key"));
+            };
+            request.onerror = () => reject(new Error("IndexedDB access denied"));
+        });
+    },
+
+    /**
+     * Retrieves the non-extractable key from IndexedDB.
+     * @returns {Promise<CryptoKey|null>}
+     */
+    async getSessionKey() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('KeyVaultSession', 1);
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('session')) return resolve(null);
+                const tx = db.transaction('session', 'readonly');
+                const getReq = tx.objectStore('session').get('current_key');
+                getReq.onsuccess = () => resolve(getReq.result || null);
+                getReq.onerror = () => reject(new Error("Failed to get session key"));
+            };
+            request.onerror = () => resolve(null); // Silent fail if DB blocked
+        });
+    },
+
+    async clearSessionVault() {
+        return new Promise((resolve) => {
+            const request = indexedDB.deleteDatabase('KeyVaultSession');
+            request.onsuccess = () => resolve();
+            request.onerror = () => resolve();
+        });
     },
 
     // Utilities

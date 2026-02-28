@@ -1,6 +1,5 @@
 com\apimanager\keyvault\repository\ProjectRepository.class
 com\apimanager\keyvault\repository\UserRepository.class
-com\apimanager\keyvault\controller\ApiKeyController.class
 com\apimanager\keyvault\model\Project.class
 com\apimanager\keyvault\model\Project$ProjectBuilder.class
 com\apimanager\keyvault\security\SecurityConfig.class

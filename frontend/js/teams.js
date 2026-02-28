@@ -144,9 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.onclick = () => {
+        logoutBtn.onclick = async () => {
             localStorage.clear();
             sessionStorage.clear();
+            await CryptoModule.clearSessionVault();
             window.location.href = 'login.html';
         };
     }

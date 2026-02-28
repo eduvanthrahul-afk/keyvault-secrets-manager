@@ -46,8 +46,8 @@ public class ReminderService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            // Log error but don't stop the job
-            System.err.println("Failed to send email to " + userEmail + ": " + e.getMessage());
+            // Log error without exposing user email in logs
+            System.err.println("Failed to send expiry reminder email: " + e.getMessage());
         }
     }
 }

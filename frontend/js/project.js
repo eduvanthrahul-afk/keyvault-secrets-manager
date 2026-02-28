@@ -7,9 +7,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const projectNameDisplay = document.getElementById('project-name-display');
     const projectTagDisplay = document.getElementById('project-tag-display');
     const decryptAllBtn = document.getElementById('decrypt-all-btn');
+    const keySearch = document.getElementById('key-search');
 
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
+
+    let allKeys = [];
 
     if (!projectId) {
         window.location.href = 'dashboard.html';
@@ -25,10 +28,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadKeys = async () => {
         try {
-            const keys = await ApiClient.keys.getByProject(projectId);
-            renderKeys(keys);
+            allKeys = await ApiClient.keys.getByProject(projectId);
+            renderKeys(allKeys);
         } catch (err) {
             console.error(err);
+            keysContainer.innerHTML = `
+                <div style="padding: 6rem; text-align: center; border: 1px solid var(--error-border); background: var(--error-bg); border-radius: var(--radius-xl);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--error);">⚠️</div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--error);">Security synchronization failed</h3>
+                    <p class="text-muted">${err.message}</p>
+                    <button class="btn btn-ghost" onclick="window.location.reload()" style="margin-top: 1rem;">Reconnect to Vault</button>
+                </div>
+            `;
         }
     };
 
@@ -38,8 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             keysContainer.innerHTML = `
                 <div style="padding: 6rem; text-align: center; border: 1px dashed var(--border-base); border-radius: var(--radius-xl); opacity: 0.6;">
                     <div style="font-size: 2.5rem; margin-bottom: 1.5rem;">🗝️</div>
-                    <h3 style="margin-bottom: 0.5rem;">Vault is empty</h3>
-                    <p class="text-muted">No security keys have been provisioned for this project yet.</p>
+                    <h3 style="margin-bottom: 0.5rem;">${keySearch && keySearch.value ? 'No matching keys' : 'Vault is empty'}</h3>
+                    <p class="text-muted">${keySearch && keySearch.value ? 'Try a different search term.' : 'No security keys have been provisioned for this project yet.'}</p>
                 </div>
             `;
             return;
@@ -83,6 +94,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    if (keySearch) {
+        keySearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allKeys.filter(k =>
+                k.name.toLowerCase().includes(query) ||
+                k.service.toLowerCase().includes(query) ||
+                k.environment.toLowerCase().includes(query)
+            );
+            renderKeys(filtered);
+        });
+    }
+
     const isExpired = (date) => {
         if (!date) return false;
         return new Date(date) < new Date();
@@ -116,12 +139,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const expiry = document.getElementById('key-expiry').value;
         const notes = document.getElementById('key-notes').value;
 
-        const password = sessionStorage.getItem('master_password');
-        const salt = localStorage.getItem('user_salt');
-
         try {
             // Encryption
-            const cryptoKey = await CryptoModule.deriveKey(password, salt);
+            let cryptoKey = await CryptoModule.getSessionKey();
+            if (!cryptoKey) {
+                alert("Session expired. Please log in again.");
+                window.location.href = 'login.html';
+                return;
+            }
+
             const { ciphertext, iv } = await CryptoModule.encrypt(rawValue, cryptoKey);
 
             await ApiClient.keys.create({
@@ -149,16 +175,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Global functions for reveal/copy
     window.revealKey = async (id, ciphertext, iv) => {
         const display = document.getElementById(`key-display-${id}`);
-        if (display.textContent !== '••••••••••••••••') {
-            display.textContent = '••••••••••••••••';
+        // Match with 24 dots as initialized in renderKeys
+        if (display.textContent !== '••••••••••••••••••••••••') {
+            display.textContent = '••••••••••••••••••••••••';
             display.classList.remove('revealed');
             return;
         }
 
         try {
-            const password = sessionStorage.getItem('master_password');
-            const salt = localStorage.getItem('user_salt');
-            const cryptoKey = await CryptoModule.deriveKey(password, salt);
+            const cryptoKey = await CryptoModule.getSessionKey();
+            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             display.textContent = plaintext;
             display.classList.add('revealed');
@@ -169,9 +196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.copyKey = async (id, ciphertext, iv) => {
         try {
-            const password = sessionStorage.getItem('master_password');
-            const salt = localStorage.getItem('user_salt');
-            const cryptoKey = await CryptoModule.deriveKey(password, salt);
+            const cryptoKey = await CryptoModule.getSessionKey();
+            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             navigator.clipboard.writeText(plaintext);
             alert('Key copied to clipboard');
@@ -191,15 +218,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     decryptAllBtn.onclick = async () => {
-        const tiles = keysContainer.querySelectorAll('.key-tile');
-        if (tiles.length === 0) return;
+        // Fix: Use correct class .key-item instead of .key-tile
+        const items = keysContainer.querySelectorAll('.key-item');
+        if (items.length === 0) return;
 
         alert('Decrypting vault...');
-        const password = sessionStorage.getItem('master_password');
-        const salt = localStorage.getItem('user_salt');
 
         try {
-            const cryptoKey = await CryptoModule.deriveKey(password, salt);
+            const cryptoKey = await CryptoModule.getSessionKey();
+            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+
             const keys = await ApiClient.keys.getByProject(projectId);
 
             keys.forEach(async (key) => {
@@ -217,3 +245,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadKeys();
 });
+

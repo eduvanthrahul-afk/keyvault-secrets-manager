@@ -6,7 +6,6 @@ X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\UserRepos
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\security\CustomUserDetailsService.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ProjectMemberRepository.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ProjectRepository.java
-X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\controller\ApiKeyController.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\ProjectDTO.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\KeyVaultApplication.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\User.java

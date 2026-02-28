@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeModal = document.getElementById('close-modal');
     const cancelProject = document.getElementById('cancel-project');
     const userEmailDisplay = document.getElementById('user-email-display');
+    const projectSearch = document.getElementById('project-search');
+
+    let allProjects = [];
 
     if (userEmailDisplay) userEmailDisplay.textContent = localStorage.getItem('user_email');
 
@@ -18,11 +21,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadProjects = async () => {
         try {
-            const projects = await ApiClient.projects.getAll();
-            renderProjects(projects);
-            updateStats(projects);
+            allProjects = await ApiClient.projects.getAll();
+            renderProjects(allProjects);
+            updateStats(allProjects);
         } catch (err) {
             console.error(err);
+            projectList.innerHTML = `
+                <div style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px solid var(--error-border); background: var(--error-bg); border-radius: var(--radius-xl);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--error);">⚠️</div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--error);">Failed to load projects</h3>
+                    <p class="text-muted">${err.message}</p>
+                    <button class="btn btn-ghost" onclick="window.location.reload()" style="margin-top: 1rem;">Try again</button>
+                </div>
+            `;
         }
     };
 
@@ -80,8 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             projectList.innerHTML = `
                 <div style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px dashed var(--border-base); border-radius: var(--radius-xl); opacity: 0.6;">
                     <div style="font-size: 2rem; margin-bottom: 1rem;">📁</div>
-                    <h3 style="margin-bottom: 0.5rem;">No active projects</h3>
-                    <p class="text-muted">Create your first project to begin securing API keys.</p>
+                    <h3 style="margin-bottom: 0.5rem;">${projectSearch && projectSearch.value ? 'No matching projects' : 'No active projects'}</h3>
+                    <p class="text-muted">${projectSearch && projectSearch.value ? 'Try a different search term.' : 'Create your first project to begin securing API keys.'}</p>
                 </div>
             `;
             return;
@@ -122,6 +133,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    if (projectSearch) {
+        projectSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allProjects.filter(p =>
+                p.name.toLowerCase().includes(query) ||
+                (p.tag && p.tag.toLowerCase().includes(query))
+            );
+            renderProjects(filtered);
+        });
+    }
+
     newProjectBtn.onclick = () => projectModal.style.display = 'flex';
     closeModal.onclick = () => projectModal.style.display = 'none';
     cancelProject.onclick = () => projectModal.style.display = 'none';
@@ -143,3 +165,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadProjects();
 });
+

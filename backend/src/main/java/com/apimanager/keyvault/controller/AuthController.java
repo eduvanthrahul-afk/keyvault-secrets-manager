@@ -62,4 +62,19 @@ public class AuthController {
 
         return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt()));
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body(Map.of("message", "Error: Not authenticated"));
+        }
+
+        String jwt = jwtUtils.generateJwtToken(authentication);
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElseThrow();
+
+        return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt()));
+    }
 }

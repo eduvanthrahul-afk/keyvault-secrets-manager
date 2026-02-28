@@ -53,7 +53,14 @@ const ApiClient = {
 
     auth: {
         login: (credentials) => ApiClient.request('/auth/login', 'POST', credentials),
-        register: (userData) => ApiClient.request('/auth/register', 'POST', userData)
+        register: (userData) => ApiClient.request('/auth/register', 'POST', userData),
+        refresh: () => ApiClient.request('/auth/refresh', 'POST').then(response => {
+            if (response && response.token) {
+                localStorage.setItem('jwt_token', response.token);
+                localStorage.setItem('user_salt', response.salt);
+            }
+            return response;
+        })
     },
 
     projects: {

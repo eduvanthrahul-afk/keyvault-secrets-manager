@@ -15,9 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('user_email', response.email);
                 localStorage.setItem('user_salt', response.salt);
 
-                // Store password in sessionStorage for the duration of the tab session
-                // This allows key derivation without re-prompting every time
-                sessionStorage.setItem('master_password', password);
+                // Derive session key once and store securely in IndexedDB
+                // We keep extractable as false so XSS cannot steal the raw key
+                const sessionKey = await CryptoModule.deriveKey(password, response.salt);
+                await CryptoModule.saveSessionKey(sessionKey);
 
                 window.location.href = 'dashboard.html';
             } catch (err) {
@@ -53,9 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        logoutBtn.addEventListener('click', async () => {
             localStorage.clear();
             sessionStorage.clear();
+            await CryptoModule.clearSessionVault();
             window.location.href = 'login.html';
         });
     }
