@@ -1,3 +1,4 @@
+com\apimanager\keyvault\controller\TeamController.class
 com\apimanager\keyvault\repository\ProjectRepository.class
 com\apimanager\keyvault\repository\UserRepository.class
 com\apimanager\keyvault\model\Project.class
@@ -9,14 +10,18 @@ com\apimanager\keyvault\model\User.class
 com\apimanager\keyvault\dto\SignupRequest.class
 com\apimanager\keyvault\controller\ProjectController.class
 com\apimanager\keyvault\dto\LoginRequest.class
+com\apimanager\keyvault\model\ProjectMember$ProjectMemberBuilder.class
 com\apimanager\keyvault\service\ReminderService.class
 com\apimanager\keyvault\dto\JwtResponse.class
 com\apimanager\keyvault\KeyVaultApplication.class
 com\apimanager\keyvault\security\AuthTokenFilter.class
 com\apimanager\keyvault\repository\ApiKeyRepository.class
 com\apimanager\keyvault\security\JwtUtils.class
+com\apimanager\keyvault\service\TeamService.class
+com\apimanager\keyvault\model\ProjectMember.class
 com\apimanager\keyvault\security\CustomUserDetailsService.class
 com\apimanager\keyvault\controller\AuthController.class
 com\apimanager\keyvault\dto\ApiKeyDTO.class
 com\apimanager\keyvault\model\ApiKey.class
 com\apimanager\keyvault\model\User$UserBuilder.class
+com\apimanager\keyvault\repository\ProjectMemberRepository.class

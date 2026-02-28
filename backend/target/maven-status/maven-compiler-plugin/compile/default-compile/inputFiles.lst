@@ -9,8 +9,10 @@ X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ProjectRe
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\ProjectDTO.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\KeyVaultApplication.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\User.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\controller\TeamController.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\security\SecurityConfig.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\service\ReminderService.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\service\TeamService.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\controller\ProjectController.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\JwtResponse.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\ProjectMember.java

@@ -10,6 +10,7 @@ import com.apimanager.keyvault.repository.ProjectRepository;
 import com.apimanager.keyvault.repository.UserRepository;
 import com.apimanager.keyvault.repository.ApiKeyRepository;
 import com.apimanager.keyvault.repository.ProjectMemberRepository;
+import com.apimanager.keyvault.service.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,11 +21,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
+@RequestMapping("/api")
 @Transactional
 public class ProjectController {
 
@@ -42,57 +43,22 @@ public class ProjectController {
     @Autowired
     private ApiKeyRepository apiKeyRepository;
 
+    @Autowired
+    private TeamService teamService;
+
     private User getCurrentUser() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
-    }
-
-    /**
-     * Verifies if a user has access to a project.
-     * Proactively creates a membership record if the user is the owner but no
-     * record exists.
-     */
-    private ProjectMember ensureMembership(Project project, User user) {
-        // 1. Direct match (High performance)
-        Optional<ProjectMember> existing = projectMemberRepository.findByProjectAndUser(project, user);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-
-        // 2. Email fallback (Handles casing issues in user records)
-        List<ProjectMember> allMembers = projectMemberRepository.findByProject(project);
-        for (ProjectMember pm : allMembers) {
-            if (pm.getUser().getEmail().equalsIgnoreCase(user.getEmail())) {
-                return pm;
-            }
-        }
-
-        // 3. Ownership bridge (Handles legacy projects where owner isn't in members
-        // list)
-        if (project.getUser() != null) {
-            User owner = project.getUser();
-            if (owner.getId().equals(user.getId()) || owner.getEmail().equalsIgnoreCase(user.getEmail())) {
-                logger.info("Migrating owner {} to member list for project {}", user.getEmail(), project.getName());
-                ProjectMember member = ProjectMember.builder()
-                        .project(project)
-                        .user(user)
-                        .role("OWNER")
-                        .build();
-                return projectMemberRepository.saveAndFlush(member);
-            }
-        }
-
-        return null;
     }
 
     @GetMapping("/projects")
     public List<ProjectDTO> getProjects() {
         User user = getCurrentUser();
 
-        // High-reliability backfill for owners
+        // High-reliability backfill for owners via service
         List<Project> ownedProjects = projectRepository.findByUser(user);
         for (Project p : ownedProjects) {
-            ensureMembership(p, user);
+            teamService.ensureMembership(p, user);
         }
 
         List<ProjectMember> memberships = projectMemberRepository.findByUser(user);
@@ -117,7 +83,7 @@ public class ProjectController {
         Project saved = projectRepository.save(project);
 
         // Add creator as owner in member list
-        ensureMembership(saved, user);
+        teamService.ensureMembership(saved, user);
 
         dto.setId(saved.getId());
         return ResponseEntity.ok(dto);
@@ -128,7 +94,12 @@ public class ProjectController {
         Project project = projectRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (ensureMembership(project, currentUser) == null) {
+        try {
+            ProjectMember member = teamService.ensureMembership(project, currentUser);
+            if (!"OWNER".equalsIgnoreCase(member.getRole())) {
+                return ResponseEntity.status(403).build();
+            }
+        } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
 
@@ -143,23 +114,31 @@ public class ProjectController {
         Project project = projectRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (!project.getUser().getId().equals(currentUser.getId())) {
+        try {
+            ProjectMember member = teamService.ensureMembership(project, currentUser);
+            if (!"OWNER".equalsIgnoreCase(member.getRole())) {
+                return ResponseEntity.status(403)
+                        .body(java.util.Map.of("message", "Only project owners can delete the project."));
+            }
+        } catch (RuntimeException e) {
             return ResponseEntity.status(403)
-                    .body(java.util.Map.of("message", "Only the project owner can delete the project"));
+                    .body(java.util.Map.of("message", "Access Denied: You are not a member of this project."));
         }
 
         projectRepository.delete(project);
         return ResponseEntity.ok().build();
     }
 
-    // --- Key Management Methods (Moved from ApiKeyController) ---
+    // --- Key Management Methods ---
 
     @GetMapping("/projects/{projectId}/keys")
     public ResponseEntity<List<ApiKeyDTO>> getKeysByProject(@PathVariable UUID projectId) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (ensureMembership(project, currentUser) == null) {
+        try {
+            teamService.ensureMembership(project, currentUser);
+        } catch (RuntimeException e) {
             logger.warn("Access denied for user {} to keys of project {}", currentUser.getEmail(), project.getName());
             return ResponseEntity.status(403).build();
         }
@@ -174,7 +153,9 @@ public class ProjectController {
         Project project = projectRepository.findById(dto.getProjectId()).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (ensureMembership(project, currentUser) == null) {
+        try {
+            teamService.ensureMembership(project, currentUser);
+        } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
 
@@ -198,7 +179,9 @@ public class ProjectController {
         ApiKey key = apiKeyRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (ensureMembership(key.getProject(), currentUser) == null) {
+        try {
+            teamService.ensureMembership(key.getProject(), currentUser);
+        } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
 
@@ -219,100 +202,13 @@ public class ProjectController {
         ApiKey key = apiKeyRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
-        if (ensureMembership(key.getProject(), currentUser) == null) {
+        try {
+            teamService.ensureMembership(key.getProject(), currentUser);
+        } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
 
         apiKeyRepository.delete(key);
-        return ResponseEntity.ok().build();
-    }
-
-    // --- Member Management Methods ---
-
-    @GetMapping("/projects/{id}/members")
-    public ResponseEntity<List<java.util.Map<String, String>>> getMembers(@PathVariable UUID id) {
-        Project project = projectRepository.findById(id).orElseThrow();
-        User currentUser = getCurrentUser();
-
-        ProjectMember pm = ensureMembership(project, currentUser);
-        if (pm == null) {
-            return ResponseEntity.status(403).body(java.util.List
-                    .of(java.util.Map.of("error", "Access Denied: You are not a member of this project.")));
-        }
-
-        List<java.util.Map<String, String>> membersList = projectMemberRepository.findByProject(project).stream()
-                .map(m -> {
-                    java.util.Map<String, String> mData = new java.util.HashMap<>();
-                    mData.put("email", m.getUser().getEmail());
-                    mData.put("role", m.getRole());
-                    return mData;
-                }).collect(Collectors.toList());
-
-        return ResponseEntity.ok(membersList);
-    }
-
-    @PostMapping("/projects/{id}/members")
-    public ResponseEntity<?> addMember(@PathVariable UUID id, @RequestBody java.util.Map<String, String> body) {
-        Project project = projectRepository.findById(id).orElseThrow();
-        User currentUser = getCurrentUser();
-
-        ProjectMember pm = ensureMembership(project, currentUser);
-        if (pm == null || !"OWNER".equalsIgnoreCase(pm.getRole())) {
-            return ResponseEntity.status(403).body(
-                    java.util.Map.of("message", "Access Denied: Only project owners can manage members."));
-        }
-
-        String email = body.get("email").toLowerCase();
-        User userToAdd = userRepository.findByEmail(email).orElse(null);
-        if (userToAdd == null) {
-            return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("message", "User with email '" + email + "' not found"));
-        }
-
-        if (projectMemberRepository.findByProjectAndUser(project, userToAdd).isPresent()) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("message", "User is already a member"));
-        }
-
-        ProjectMember newMember = ProjectMember.builder()
-                .project(project)
-                .user(userToAdd)
-                .role("MEMBER")
-                .build();
-        projectMemberRepository.save(newMember);
-
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/projects/{id}/members/remove")
-    public ResponseEntity<?> removeMember(@PathVariable UUID id, @RequestBody java.util.Map<String, String> body) {
-        String email = body.get("email");
-        Project project = projectRepository.findById(id).orElseThrow();
-        User currentUser = getCurrentUser();
-
-        ProjectMember pm = ensureMembership(project, currentUser);
-        if (pm == null || !"OWNER".equalsIgnoreCase(pm.getRole())) {
-            return ResponseEntity.status(403)
-                    .body(java.util.Map.of("message", "Access Denied: Only project owners can remove members."));
-        }
-
-        List<ProjectMember> allMembers = projectMemberRepository.findByProject(project);
-        ProjectMember memberToRemove = allMembers.stream()
-                .filter(m -> m.getUser().getEmail().equalsIgnoreCase(email))
-                .findFirst()
-                .orElse(null);
-
-        if (memberToRemove == null) {
-            return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("message", "User is not a member of this project."));
-        }
-
-        // Prevent owner from removing themselves
-        if (memberToRemove.getUser().getId().equals(project.getUser().getId())) {
-            return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("message", "The project owner cannot be removed."));
-        }
-
-        projectMemberRepository.delete(memberToRemove);
         return ResponseEntity.ok().build();
     }
 

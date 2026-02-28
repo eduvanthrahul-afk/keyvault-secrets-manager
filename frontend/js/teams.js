@@ -43,11 +43,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const members = await ApiClient.projects.getMembers(projectId);
+            const members = await ApiClient.projects.getMembers(projectId) || [];
 
-            // Case-insensitive role check
-            const me = members.find(m => m.email.toLowerCase() === currentUserEmail);
-            const isOwner = me && me.role.toUpperCase() === 'OWNER';
+            // Case-insensitive role check with null safety
+            const me = members.find(m => m.email && m.email.toLowerCase() === currentUserEmail);
+            const isOwner = me && me.role && me.role.toUpperCase() === 'OWNER';
 
             if (isOwner) {
                 addMemberBtn.style.display = 'flex';
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             membersSection.style.display = 'block';
             emptyState.style.display = 'none';
         } catch (err) {
-            alert('Failed to load members: ' + err.message);
+            console.error('Failed to load members:', err);
             membersSection.style.display = 'none';
             emptyState.style.display = 'block';
             addMemberBtn.style.display = 'none';
@@ -80,10 +80,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div>
                     <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.25rem;">Role</div>
-                    <span class="badge ${m.role.toUpperCase() === 'OWNER' ? 'badge-prod' : 'badge-dev'}">${m.role}</span>
+                    <span class="badge ${(m.role || '').toUpperCase() === 'OWNER' ? 'badge-prod' : 'badge-dev'}">${m.role || 'MEMBER'}</span>
                 </div>
                 <div style="text-align: right;">
-                    ${(isOwner && m.role.toUpperCase() !== 'OWNER' && !isSelf) ? `
+                    ${(isOwner && (m.role || '').toUpperCase() !== 'OWNER' && !isSelf) ? `
                         <button class="btn btn-ghost remove-member-btn" data-email="${m.email}" style="color: var(--error); padding: 0.5rem;" title="Remove Member">
                             <i class="fa-solid fa-user-minus"></i>
                         </button>

@@ -32,6 +32,9 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<ApiKey> keys;
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ProjectMember> members;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

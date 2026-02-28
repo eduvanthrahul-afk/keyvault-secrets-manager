@@ -64,19 +64,19 @@ const ApiClient = {
     },
 
     projects: {
-        getAll: () => ApiClient.request('/projects'),
-        create: (data) => ApiClient.request('/projects', 'POST', data),
-        update: (id, data) => ApiClient.request(`/projects/${id}`, 'PUT', data),
-        delete: (id) => ApiClient.request(`/projects/${id}`, 'DELETE'),
-        getMembers: (id) => ApiClient.request(`/projects/${id}/members`),
-        addMember: (id, email) => ApiClient.request(`/projects/${id}/members`, 'POST', { email }),
-        removeMember: (id, email) => ApiClient.request(`/projects/${id}/members/remove`, 'POST', { email })
+        getAll: () => ApiClient.request('/api/projects'),
+        create: (data) => ApiClient.request('/api/projects', 'POST', data),
+        update: (id, data) => ApiClient.request(`/api/projects/${id}`, 'PUT', data),
+        delete: (id) => ApiClient.request(`/api/projects/${id}`, 'DELETE'),
+        getMembers: (id) => ApiClient.request(`/api/projects/${id}/members`),
+        addMember: (id, email) => ApiClient.request(`/api/projects/${id}/members`, 'POST', { email }),
+        removeMember: (id, email) => ApiClient.request(`/api/projects/${id}/members/remove`, 'POST', { email })
     },
 
     keys: {
-        getByProject: (projectId) => ApiClient.request(`/projects/${projectId}/keys`),
-        create: (data) => ApiClient.request('/keys', 'POST', data),
-        update: (id, data) => ApiClient.request(`/keys/${id}`, 'PUT', data),
-        delete: (id) => ApiClient.request(`/keys/${id}`, 'DELETE')
+        getByProject: (projectId) => ApiClient.request(`/api/projects/${projectId}/keys`),
+        create: (data) => ApiClient.request('/api/keys', 'POST', data),
+        update: (id, data) => ApiClient.request(`/api/keys/${id}`, 'PUT', data),
+        delete: (id) => ApiClient.request(`/api/keys/${id}`, 'DELETE')
     }
 };

@@ -141,10 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             // Encryption
-            let cryptoKey = await CryptoModule.getSessionKey();
+            let cryptoKey = await CryptoModule.getProjectKey(projectId);
             if (!cryptoKey) {
-                alert("Session expired. Please log in again.");
-                window.location.href = 'login.html';
+                alert("Failed to initialize project security vault.");
                 return;
             }
 
@@ -183,8 +182,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const cryptoKey = await CryptoModule.getSessionKey();
-            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+            const cryptoKey = await CryptoModule.getProjectKey(projectId);
+            if (!cryptoKey) throw new Error("Vault initialization error.");
 
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             display.textContent = plaintext;
@@ -196,8 +195,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.copyKey = async (id, ciphertext, iv) => {
         try {
-            const cryptoKey = await CryptoModule.getSessionKey();
-            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+            const cryptoKey = await CryptoModule.getProjectKey(projectId);
+            if (!cryptoKey) throw new Error("Vault initialization error.");
 
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             navigator.clipboard.writeText(plaintext);
@@ -225,8 +224,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Decrypting vault...');
 
         try {
-            const cryptoKey = await CryptoModule.getSessionKey();
-            if (!cryptoKey) throw new Error("Session expired. Please log in again.");
+            const cryptoKey = await CryptoModule.getProjectKey(projectId);
+            if (!cryptoKey) throw new Error("Vault initialization error.");
 
             const keys = await ApiClient.keys.getByProject(projectId);
 

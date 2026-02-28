@@ -138,6 +138,40 @@ const CryptoModule = {
         });
     },
 
+    /**
+     * Derives a deterministic shared encryption key for a project.
+     * In a production Zero-Knowledge architecture, this would use RSA public key exchange.
+     * For this MVP, we derive a symmetric key based on the unguessable Project UUID.
+     * @param {string} projectId 
+     * @returns {Promise<CryptoKey>}
+     */
+    async getProjectKey(projectId) {
+        const encoder = new TextEncoder();
+        const baseKey = await crypto.subtle.importKey(
+            'raw',
+            encoder.encode(projectId),
+            'PBKDF2',
+            false,
+            ['deriveKey']
+        );
+
+        // Static system salt for project key derivation
+        const salt = this.hexToBuffer("abcdef1234567890abcdef1234567890");
+
+        return await crypto.subtle.deriveKey(
+            {
+                name: 'PBKDF2',
+                salt: salt,
+                iterations: 50000,
+                hash: 'SHA-256'
+            },
+            baseKey,
+            { name: this.ALGO, length: this.KEY_LENGTH },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    },
+
     // Utilities
     bufferToHex(buffer) {
         return Array.from(new Uint8Array(buffer))
