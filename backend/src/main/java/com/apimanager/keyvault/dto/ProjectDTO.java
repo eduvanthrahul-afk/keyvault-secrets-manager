@@ -8,4 +8,5 @@ public class ProjectDTO {
     private UUID id;
     private String name;
     private String tag;
+    private String ownerEmail;
 }

@@ -15,14 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('user_email', response.email);
                 localStorage.setItem('user_salt', response.salt);
 
-                // Derive session key once and store securely in IndexedDB
-                // We keep extractable as false so XSS cannot steal the raw key
                 const sessionKey = await CryptoModule.deriveKey(password, response.salt);
                 await CryptoModule.saveSessionKey(sessionKey);
 
-                window.location.href = 'dashboard.html';
+                notifications.showToast('Access Granted', 'Initializing secure session...', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 800);
             } catch (err) {
-                alert('Login failed: ' + err.message);
+                notifications.showToast('Login Blocked', err.message, 'error');
             }
         });
     }
@@ -35,30 +34,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const confirm = document.getElementById('confirm-password').value;
 
             if (password !== confirm) {
-                alert('Passwords do not match');
+                notifications.showToast('Validation Error', 'Password mismatch detected.', 'warning');
                 return;
             }
 
-            // Generate a fresh salt for this user
             const salt = CryptoModule.generateSalt();
 
             try {
                 await ApiClient.auth.register({ email, password, salt });
-                alert('Registration successful! Please login.');
-                window.location.href = 'login.html';
+                notifications.showToast('Account Created', 'Architecture registry updated. Please login.', 'success');
+                setTimeout(() => window.location.href = 'login.html', 1500);
             } catch (err) {
-                alert('Registration failed: ' + err.message);
+                notifications.showToast('Registration Failure', err.message, 'error');
             }
         });
     }
 
+    // Explicit Logout for auth pages context
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            localStorage.clear();
-            sessionStorage.clear();
-            await CryptoModule.clearSessionVault();
-            window.location.href = 'login.html';
-        });
+        logoutBtn.onclick = async (e) => {
+            e.preventDefault();
+            const confirmed = await notifications.confirm('End Session', 'Are you sure you want to logout?', 'Sign Out', 'info');
+            if (confirmed) {
+                localStorage.clear();
+                sessionStorage.clear();
+                if (typeof CryptoModule !== 'undefined' && CryptoModule.clearSessionVault) {
+                    await CryptoModule.clearSessionVault();
+                }
+                window.location.href = 'login.html';
+            }
+        };
     }
 });
+

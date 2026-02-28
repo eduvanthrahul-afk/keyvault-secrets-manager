@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keys | KeyVault Pro</title>
+    <!-- Automatic Theme Detection is handled by CSS -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,32 +14,47 @@
     <div class="app-shell">
         <!-- Sidebar -->
         <aside class="sidebar" role="navigation" aria-label="Main Navigation">
-            <div class="sidebar-logo" style="margin-bottom: 2rem;">
-                <div class="logo-container">
-                    <div class="app-logo"></div>
+            <div class="sidebar-logo">
+                <a href="dashboard.html" class="logo-container">
+                    <div class="app-logo">
+                        <i class="fa-solid fa-vault" style="color: white; font-size: 14px;"></i>
+                    </div>
                     <span class="logo-text">KeyVault</span>
-                </div>
+                </a>
             </div>
 
-            <nav style="flex: 1;">
-                <a href="dashboard.html" class="btn btn-ghost" style="width: 100%; justify-content: flex-start;">
-                    <i class="fa-solid fa-grid-2"></i> Dashboard
+            <nav>
+                <div class="nav-label">Overview</div>
+                <a href="dashboard.html" class="nav-link active">
+                    <i class="fa-solid fa-house-chimney"></i> Dashboard
                 </a>
-                <a href="teams.html" class="btn btn-ghost" style="width: 100%; justify-content: flex-start;">
-                    <i class="fa-solid fa-users"></i> Teams
+                <a href="teams.html" class="nav-link">
+                    <i class="fa-solid fa-user-group"></i> Teams
+                </a>
+                <a href="audit.html" class="nav-link">
+                    <i class="fa-solid fa-shield-halved"></i> Audit Logs
+                </a>
+
+                <div class="nav-label">System</div>
+                <a href="#" class="nav-link" style="opacity: 0.4; cursor: not-allowed;">
+                    <i class="fa-solid fa-gears"></i> Settings
                 </a>
             </nav>
 
-            <div class="sidebar-footer" style="border-top: 1px solid var(--border-base); padding-top: 1.5rem;">
-                <div id="user-info" style="margin-bottom: 1rem;">
-                    <div id="user-email-display"
-                        style="font-size: 0.825rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        user@example.com</div>
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card">
+                    <div class="user-profile-info">
+                        <div class="user-avatar-circle">A</div>
+                        <div class="user-meta-data">
+                            <span id="user-email-display" class="user-email-text">user@example.com</span>
+                            <span class="user-role-text">Administrator</span>
+                        </div>
+                    </div>
+                    <button id="logout-btn" class="sidebar-logout-btn">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Sign out</span>
+                    </button>
                 </div>
-                <button id="logout-btn" class="btn btn-ghost"
-                    style="width: 100%; justify-content: flex-start; padding: 0.5rem 0;">
-                    <i class="fa-solid fa-right-from-bracket"></i> Sign out
-                </button>
             </div>
         </aside>
 
@@ -46,50 +62,58 @@
             <header class="top-nav">
                 <div style="flex: 1;">
                     <nav aria-label="Breadcrumb">
-                        <ol
-                            style="list-style: none; display: flex; gap: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">
-                            <li><a href="dashboard.html" style="color: inherit; text-decoration: none;">Projects</a>
-                            </li>
-                            <li>/</li>
-                            <li style="color: var(--text-main); font-weight: 500;" id="project-name-display">Project
-                                Name</li>
-                        </ol>
+                        <ul class="breadcrumb">
+                            <li><a href="dashboard.html">Projects</a></li>
+                            <li><i class="fa-solid fa-chevron-right" style="font-size: 10px; opacity: 0.5;"></i></li>
+                            <li class="active" id="project-name-display">Project Name</li>
+                        </ul>
                     </nav>
+                </div>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <div class="badge badge-dev"
+                        style="background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border);">
+                        Production View
+                    </div>
                 </div>
             </header>
 
             <main class="content-area fade-in">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem;">
+                <div class="flex-between" style="margin-bottom: 48px;">
                     <div>
                         <div id="project-tag-display" class="badge badge-dev"
-                            style="margin-bottom: 1rem; display: inline-block;">Production</div>
-                        <h1 id="project-name-title" style="margin-bottom: 0.25rem;">Workspace Vault</h1>
-                        <p class="text-muted">Direct interface to manage and rotate sensitive API credentials.</p>
+                            style="margin-bottom: 16px; border-radius: 6px; padding: 6px 10px;">Production</div>
+                        <h1 id="project-name-title">Workspace Vault</h1>
+                        <p class="text-body text-muted" style="margin-top: 8px; max-width: 500px;">Direct interface to
+                            manage and rotate sensitive API credentials.</p>
                     </div>
-                    <div style="display: flex; gap: 0.75rem;">
-                        <button id="decrypt-all-btn" class="btn">
-                            <i class="fa-solid fa-lock-open"></i> Unlock All
+                    <div style="display: flex; gap: 12px; height: 36px;">
+                        <button id="decrypt-all-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-lock-open" style="font-size: 12px;"></i> Unlock All
                         </button>
-                        <button id="add-key-btn" class="btn btn-primary">
-                            <i class="fa-solid fa-plus"></i> Add Secret Key
+                        <button id="add-key-btn" class="btn btn-primary"
+                            style="padding-left: 14px; padding-right: 18px;">
+                            <i class="fa-solid fa-plus" style="font-size: 12px; margin-right: 4px;"></i> Add Secret Key
                         </button>
                     </div>
                 </div>
 
-                <div class="form-group" style="max-width: 400px; margin-bottom: 2rem; position: relative;">
-                    <i class="fa-solid fa-magnifying-glass"
-                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary);"></i>
-                    <input type="text" id="key-search" class="input" placeholder="Find key by name or provider..."
-                        style="padding-left: 2.5rem;">
+                <div class="flex-between" style="margin-bottom: 24px; align-items: center;">
+                    <h3 style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Managed Secrets</h3>
+                    <div class="search-container-premium" style="width: 380px; margin: 0;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="key-search" class="search-input-premium"
+                            placeholder="Filter vault by keyword, provider, or environment...">
+                    </div>
                 </div>
 
                 <!-- Keys List (Preserved ID) -->
                 <div id="keys-container" class="keys-container">
                     <!-- JavaScript will inject .key-item tiles here -->
-                    <div style="padding: 4rem; text-align: center; color: var(--text-tertiary);">
-                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                        <p>Synchronizing with vault...</p>
+                    <div class="empty-state" style="padding: 80px 24px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <p style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">
+                            Synchronizing with vault</p>
+                        <p class="text-muted">Fetching encrypted credentials...</p>
                     </div>
                 </div>
             </main>
@@ -98,48 +122,95 @@
 
     <!-- Modal for New Key (Preserved IDs) -->
     <div class="modal-overlay" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-modal-title">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content" style="max-width: 640px;">
             <div class="modal-header">
                 <h2 id="key-modal-title">Security Initialization</h2>
-                <button id="close-key-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                <button id="close-key-modal" class="btn btn-ghost" style="padding: 8px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <form id="key-form">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
+            <form id="key-form" style="display: grid; gap: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div class="form-group" style="margin: 0;">
                         <label for="key-name" class="label">Key Name</label>
                         <input type="text" id="key-name" class="input" placeholder="e.g. Stripe Secret" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin: 0;">
                         <label for="key-service" class="label">Provider</label>
                         <input type="text" id="key-service" class="input" placeholder="AWS, Stripe, etc." required>
                     </div>
-                    <div class="form-group">
-                        <label for="key-env" class="label">Environment</label>
-                        <select id="key-env" class="input">
-                            <option value="dev">Development</option>
-                            <option value="test">Staging</option>
-                            <option value="prod">Production</option>
-                        </select>
+                    <div class="form-group" style="margin: 0;">
+                        <label for="key-env-custom" class="label">Context Environment</label>
+                        <div class="custom-dropdown" id="env-dropdown">
+                            <div class="dropdown-toggle" id="env-toggle">
+                                <i class="fa-solid fa-server prefix-icon"></i>
+                                <span id="env-selected-text">Development</span>
+                                <i class="fa-solid fa-chevron-down chevron-icon"></i>
+                            </div>
+                            <div class="dropdown-menu" id="env-menu">
+                                <div class="dropdown-item selected" data-value="dev"><i class="fa-solid fa-flask"></i>
+                                    Development</div>
+                                <div class="dropdown-item" data-value="test"><i class="fa-solid fa-vial"></i> Staging
+                                </div>
+                                <div class="dropdown-item" data-value="prod"><i class="fa-solid fa-bolt"></i> Production
+                                </div>
+                            </div>
+                            <input type="hidden" id="key-env" value="dev">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="key-expiry" class="label">Expiry Date</label>
-                        <input type="date" id="key-expiry" class="input">
+                    <div class="form-group" style="margin: 0;">
+                        <label for="key-expiry-custom" class="label">Expiration Timeline</label>
+                        <div class="custom-dropdown" id="calendar-dropdown">
+                            <div class="dropdown-toggle" id="calendar-toggle">
+                                <i class="fa-solid fa-calendar-days prefix-icon"></i>
+                                <span id="calendar-selected-text">No Expiration Set</span>
+                                <i class="fa-solid fa-chevron-down chevron-icon"></i>
+                            </div>
+                            <div class="calendar-popup" id="calendar-popup">
+                                <div class="calendar-header">
+                                    <button type="button" class="calendar-nav-btn" id="prev-month">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                    <div class="calendar-month-year" id="calendar-month-year">February 2026</div>
+                                    <button type="button" class="calendar-nav-btn" id="next-month">
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                <div class="calendar-grid" id="calendar-grid">
+                                    <div class="calendar-day-label">Su</div>
+                                    <div class="calendar-day-label">Mo</div>
+                                    <div class="calendar-day-label">Tu</div>
+                                    <div class="calendar-day-label">We</div>
+                                    <div class="calendar-day-label">Th</div>
+                                    <div class="calendar-day-label">Fr</div>
+                                    <div class="calendar-day-label">Sa</div>
+                                    <!-- Days will be dynamically injected -->
+                                </div>
+                                <div class="calendar-footer">
+                                    <button type="button" class="calendar-btn-text" id="clear-date">Clear</button>
+                                    <button type="button" class="calendar-btn-text" id="set-today">Today</button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="key-expiry" value="">
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0;">
+
+                <div class="form-group" style="margin: 0;">
                     <label for="key-value" class="label">Secret Value</label>
-                    <textarea id="key-value" class="input" style="font-family: var(--font-mono); min-height: 100px;"
+                    <!-- Using SF Mono/Jetbrains here specifically -->
+                    <textarea id="key-value" class="textarea mono" style="min-height: 120px; font-size: 13px;"
                         placeholder="Paste secret here..." required></textarea>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin: 0;">
                     <label for="key-notes" class="label">Administrative Notes</label>
-                    <textarea id="key-notes" class="input" style="min-height: 60px;"
+                    <textarea id="key-notes" class="textarea" style="min-height: 80px;"
                         placeholder="Context, ownership, or rotation info..."></textarea>
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
-                    <button type="button" id="cancel-key" class="btn btn-ghost">Discard</button>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+                    <button type="button" id="cancel-key" class="btn btn-secondary">Discard</button>
                     <button type="submit" id="save-key-btn" class="btn btn-primary">Encrypt & Save</button>
                 </div>
             </form>

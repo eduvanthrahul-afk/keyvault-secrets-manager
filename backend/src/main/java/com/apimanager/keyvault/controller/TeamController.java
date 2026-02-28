@@ -30,7 +30,7 @@ public class TeamController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Map<String, String>>> getMembers(@PathVariable UUID projectId) {
+    public ResponseEntity<List<Map<String, String>>> getMembers(@PathVariable("projectId") UUID projectId) {
         try {
             return ResponseEntity.ok(teamService.getProjectMembers(projectId, getCurrentUser()));
         } catch (RuntimeException e) {
@@ -39,13 +39,15 @@ public class TeamController {
     }
 
     @PostMapping
-    public ResponseEntity<?> addMember(@PathVariable UUID projectId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> addMember(@PathVariable("projectId") UUID projectId,
+            @RequestBody Map<String, String> body) {
         try {
             String email = body.get("email");
+            String role = body.get("role"); // Extract role from request
             if (email == null || email.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
             }
-            teamService.addMember(projectId, email, getCurrentUser());
+            teamService.addMember(projectId, email, role, getCurrentUser());
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -53,13 +55,30 @@ public class TeamController {
     }
 
     @PostMapping("/remove")
-    public ResponseEntity<?> removeMember(@PathVariable UUID projectId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> removeMember(@PathVariable("projectId") UUID projectId,
+            @RequestBody Map<String, String> body) {
         try {
             String email = body.get("email");
             if (email == null || email.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
             }
             teamService.removeMember(projectId, email, getCurrentUser());
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/role")
+    public ResponseEntity<?> updateMemberRole(@PathVariable("projectId") UUID projectId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String email = body.get("email");
+            String role = body.get("role");
+            if (email == null || email.isEmpty() || role == null || role.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Email and role are required"));
+            }
+            teamService.updateMemberRole(projectId, email, role, getCurrentUser());
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

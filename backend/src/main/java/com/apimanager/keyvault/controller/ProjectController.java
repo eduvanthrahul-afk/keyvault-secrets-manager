@@ -46,6 +46,12 @@ public class ProjectController {
     @Autowired
     private TeamService teamService;
 
+    @Autowired
+    private com.apimanager.keyvault.service.AuditService auditService;
+
+    @Autowired
+    private com.apimanager.keyvault.repository.AuditLogRepository auditLogRepository;
+
     private User getCurrentUser() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
@@ -68,6 +74,10 @@ public class ProjectController {
             dto.setId(p.getId());
             dto.setName(p.getName());
             dto.setTag(p.getTag());
+            // Add owner email for frontend permission handling
+            if (p.getUser() != null) {
+                dto.setOwnerEmail(p.getUser().getEmail());
+            }
             return dto;
         }).collect(Collectors.toList());
     }
@@ -85,20 +95,21 @@ public class ProjectController {
         // Add creator as owner in member list
         teamService.ensureMembership(saved, user);
 
+        auditService.logAction(saved, user, "CREATE_PROJECT", "PROJECT", saved.getId().toString(),
+                "Created project " + saved.getName());
+
         dto.setId(saved.getId());
+        dto.setOwnerEmail(user.getEmail());
         return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<ProjectDTO> updateProject(@PathVariable UUID id, @RequestBody ProjectDTO dto) {
+    public ResponseEntity<ProjectDTO> updateProject(@PathVariable("id") UUID id, @RequestBody ProjectDTO dto) {
         Project project = projectRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
         try {
-            ProjectMember member = teamService.ensureMembership(project, currentUser);
-            if (!"OWNER".equalsIgnoreCase(member.getRole())) {
-                return ResponseEntity.status(403).build();
-            }
+            teamService.verifyRole(project, currentUser, "OWNER");
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
@@ -106,25 +117,30 @@ public class ProjectController {
         project.setName(dto.getName());
         project.setTag(dto.getTag());
         projectRepository.save(project);
+
+        auditService.logAction(project, currentUser, "UPDATE_PROJECT", "PROJECT", project.getId().toString(),
+                "Updated project details");
+
         return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/projects/{id}")
-    public ResponseEntity<?> deleteProject(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteProject(@PathVariable("id") UUID id) {
         Project project = projectRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
         try {
-            ProjectMember member = teamService.ensureMembership(project, currentUser);
-            if (!"OWNER".equalsIgnoreCase(member.getRole())) {
-                return ResponseEntity.status(403)
-                        .body(java.util.Map.of("message", "Only project owners can delete the project."));
-            }
+            teamService.verifyRole(project, currentUser, "OWNER");
         } catch (RuntimeException e) {
+            logger.warn("Access Denied for user {} attempting to delete project {} (ID: {}). Owner is {}. Error: {}",
+                    currentUser.getEmail(), project.getName(), project.getId(),
+                    (project.getUser() != null ? project.getUser().getEmail() : "NULL"), e.getMessage());
             return ResponseEntity.status(403)
-                    .body(java.util.Map.of("message", "Access Denied: You are not a member of this project."));
+                    .body(java.util.Map.of("message", e.getMessage()));
         }
 
+        auditService.logAction(project, currentUser, "DELETE_PROJECT", "PROJECT", project.getId().toString(),
+                "Deleted project");
         projectRepository.delete(project);
         return ResponseEntity.ok().build();
     }
@@ -132,16 +148,27 @@ public class ProjectController {
     // --- Key Management Methods ---
 
     @GetMapping("/projects/{projectId}/keys")
-    public ResponseEntity<List<ApiKeyDTO>> getKeysByProject(@PathVariable UUID projectId) {
+    public ResponseEntity<?> getKeysByProject(@PathVariable("projectId") UUID projectId) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         User currentUser = getCurrentUser();
 
         try {
-            teamService.ensureMembership(project, currentUser);
-        } catch (RuntimeException e) {
-            logger.warn("Access denied for user {} to keys of project {}", currentUser.getEmail(), project.getName());
-            return ResponseEntity.status(403).build();
+            teamService.verifyRole(project, currentUser, "VIEWER");
+        } catch (Exception e) {
+            // Fallback: allow project owner access even if role verification fails
+            User owner = project.getUser();
+            if (owner != null && owner.getId().equals(currentUser.getId())) {
+                logger.debug("Owner access granted for project {} to user {} via ID fallback.", project.getId(),
+                        currentUser.getEmail());
+            } else {
+                logger.warn("Access denied for user {} to keys of project {}: {}", currentUser.getEmail(),
+                        project.getName(), e.getMessage());
+                return ResponseEntity.status(403).body(java.util.Map.of("message", e.getMessage()));
+            }
         }
+
+        auditService.logAction(project, currentUser, "VIEW_KEYS", "PROJECT", project.getId().toString(),
+                "Viewed API Keys list");
 
         List<ApiKeyDTO> keys = apiKeyRepository.findByProject(project).stream().map(this::convertToApiKeyDTO)
                 .collect(Collectors.toList());
@@ -154,7 +181,7 @@ public class ProjectController {
         User currentUser = getCurrentUser();
 
         try {
-            teamService.ensureMembership(project, currentUser);
+            teamService.verifyRole(project, currentUser, "EDITOR");
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
@@ -171,16 +198,18 @@ public class ProjectController {
                 .build();
 
         ApiKey saved = apiKeyRepository.save(key);
+        auditService.logAction(project, currentUser, "CREATE_KEY", "API_KEY", saved.getId().toString(),
+                "Created key: " + saved.getName());
         return ResponseEntity.ok(convertToApiKeyDTO(saved));
     }
 
     @PutMapping("/keys/{id}")
-    public ResponseEntity<ApiKeyDTO> updateKey(@PathVariable UUID id, @RequestBody ApiKeyDTO dto) {
+    public ResponseEntity<ApiKeyDTO> updateKey(@PathVariable("id") UUID id, @RequestBody ApiKeyDTO dto) {
         ApiKey key = apiKeyRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
         try {
-            teamService.ensureMembership(key.getProject(), currentUser);
+            teamService.verifyRole(key.getProject(), currentUser, "EDITOR");
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
@@ -194,22 +223,65 @@ public class ProjectController {
         key.setNotes(dto.getNotes());
 
         apiKeyRepository.save(key);
+        auditService.logAction(key.getProject(), currentUser, "UPDATE_KEY", "API_KEY", key.getId().toString(),
+                "Updated key: " + key.getName());
         return ResponseEntity.ok(convertToApiKeyDTO(key));
     }
 
     @DeleteMapping("/keys/{id}")
-    public ResponseEntity<?> deleteKey(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteKey(@PathVariable("id") UUID id) {
         ApiKey key = apiKeyRepository.findById(id).orElseThrow();
         User currentUser = getCurrentUser();
 
         try {
-            teamService.ensureMembership(key.getProject(), currentUser);
+            teamService.verifyRole(key.getProject(), currentUser, "EDITOR");
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).build();
         }
 
+        auditService.logAction(key.getProject(), currentUser, "DELETE_KEY", "API_KEY", key.getId().toString(),
+                "Deleted key: " + key.getName());
         apiKeyRepository.delete(key);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/projects/{projectId}/audit-logs")
+    public ResponseEntity<?> getAuditLogs(@PathVariable("projectId") UUID projectId) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
+        User currentUser = getCurrentUser();
+
+        try {
+            teamService.verifyRole(project, currentUser, "ADMIN");
+        } catch (Exception e) {
+            // Allow owner access as fallback
+            User owner = project.getUser();
+            if (owner != null && owner.getId().equals(currentUser.getId())) {
+                logger.debug("Owner access granted for audit logs of project {} to user {} via ID fallback.",
+                        project.getId(), currentUser.getEmail());
+            } else {
+                logger.warn("Access denied for user {} to audit logs of project {}: {}", currentUser.getEmail(),
+                        project.getName(), e.getMessage());
+                return ResponseEntity.status(403).body(java.util.Map.of("message", e.getMessage()));
+            }
+        }
+
+        List<com.apimanager.keyvault.model.AuditLog> logs = auditLogRepository
+                .findByProjectOrderByCreatedAtDesc(project);
+
+        List<com.apimanager.keyvault.dto.AuditLogDTO> dtos = logs.stream().map(l -> {
+            com.apimanager.keyvault.dto.AuditLogDTO d = new com.apimanager.keyvault.dto.AuditLogDTO();
+            d.setId(l.getId());
+            d.setProjectId(l.getProject().getId());
+            d.setUserEmail(l.getUser().getEmail());
+            d.setAction(l.getAction());
+            d.setTargetType(l.getTargetType());
+            d.setTargetId(l.getTargetId());
+            d.setDetails(l.getDetails());
+            d.setIpAddress(l.getIpAddress());
+            d.setCreatedAt(l.getCreatedAt());
+            return d;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     private ApiKeyDTO convertToApiKeyDTO(ApiKey key) {

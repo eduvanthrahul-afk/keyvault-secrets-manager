@@ -119,6 +119,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('close-key-modal').onclick = () => keyModal.style.display = 'none';
     document.getElementById('cancel-key').onclick = () => keyModal.style.display = 'none';
 
+    // Environment Custom Dropdown Logic
+    const envToggle = document.getElementById('env-toggle');
+    const envMenu = document.getElementById('env-menu');
+    const envSelectedText = document.getElementById('env-selected-text');
+    const envHiddenInput = document.getElementById('key-env');
+
+    if (envToggle) {
+        envToggle.onclick = (e) => {
+            e.stopPropagation();
+            envMenu.classList.toggle('show');
+            envToggle.classList.toggle('active');
+        };
+
+        const envItems = envMenu.querySelectorAll('.dropdown-item');
+        envItems.forEach(item => {
+            item.onclick = () => {
+                const val = item.getAttribute('data-value');
+                envHiddenInput.value = val;
+                envSelectedText.textContent = item.textContent.trim();
+
+                envItems.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+
+                envMenu.classList.remove('show');
+                envToggle.classList.remove('active');
+            };
+        });
+    }
+
+    // Global close for all dropdowns
+    document.addEventListener('click', () => {
+        if (envMenu) {
+            envMenu.classList.remove('show');
+            envToggle.classList.remove('active');
+        }
+    });
+
     // Click outside to close
     window.onclick = (event) => {
         if (event.target == keyModal) {
@@ -143,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Encryption
             let cryptoKey = await CryptoModule.getProjectKey(projectId);
             if (!cryptoKey) {
-                alert("Failed to initialize project security vault.");
+                notifications.showToast('Security Error', 'Failed to initialize project security vault.', 'error');
                 return;
             }
 
@@ -162,9 +199,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             keyModal.style.display = 'none';
             keyForm.reset();
+            notifications.showToast('Key Provisioned', `Secret for "${name}" added to vault.`, 'success');
             loadKeys();
         } catch (err) {
-            alert('Operation failed: ' + err.message);
+            notifications.showToast('Provisioning Failed', err.message, 'error');
         } finally {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Encrypt & Save';
@@ -188,8 +226,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             display.textContent = plaintext;
             display.classList.add('revealed');
+            notifications.showToast('Secret Revealed', 'Confidential data decrypted for viewing.', 'info');
         } catch (err) {
-            alert(err.message);
+            notifications.showToast('Decryption Error', err.message, 'error');
         }
     };
 
@@ -200,28 +239,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const plaintext = await CryptoModule.decrypt(ciphertext, iv, cryptoKey);
             navigator.clipboard.writeText(plaintext);
-            alert('Key copied to clipboard');
+            notifications.showToast('Clipboard Sync', 'Secret copied to clipboard.', 'success');
         } catch (err) {
-            alert(err.message);
+            notifications.showToast('Copy Failed', err.message, 'error');
         }
     };
 
     window.deleteKey = async (id) => {
-        if (!confirm('Are you sure?')) return;
+        const confirmed = await notifications.confirm(
+            'Revoke Security Key',
+            'Are you sure you want to revoke this secret? Any applications using this key will experience immediate service interruption.',
+            'Confirm Revoke'
+        );
+        if (!confirmed) return;
+
         try {
             await ApiClient.keys.delete(id);
+            notifications.showToast('Key Revoked', 'The secret has been purged from the vault.', 'success');
             loadKeys();
         } catch (err) {
-            alert(err.message);
+            notifications.showToast('Revocation Failed', err.message, 'error');
         }
     };
 
     decryptAllBtn.onclick = async () => {
-        // Fix: Use correct class .key-item instead of .key-tile
         const items = keysContainer.querySelectorAll('.key-item');
         if (items.length === 0) return;
 
-        alert('Decrypting vault...');
+        notifications.showToast('Batch Decrypt', 'Initializing full vault decryption...', 'info');
 
         try {
             const cryptoKey = await CryptoModule.getProjectKey(projectId);
@@ -237,10 +282,121 @@ document.addEventListener('DOMContentLoaded', async () => {
                     display.classList.add('revealed');
                 }
             });
+            notifications.showToast('Vault Decrypted', 'All active secrets are now visible.', 'success');
         } catch (err) {
-            alert('Decryption failed: ' + err.message);
+            notifications.showToast('Decryption Failed', err.message, 'error');
         }
     };
+
+    // Premium Calendar Logic
+    const calendarToggle = document.getElementById('calendar-toggle');
+    const calendarPopup = document.getElementById('calendar-popup');
+    const calendarGrid = document.getElementById('calendar-grid');
+    const monthYearDisplay = document.getElementById('calendar-month-year');
+    const hiddenExpiry = document.getElementById('key-expiry');
+    const selectedText = document.getElementById('calendar-selected-text');
+
+    let calCurrentDate = new Date();
+    let calSelectedDate = null;
+
+    const renderCalendar = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const prevMonthDays = new Date(year, month, 0).getDate();
+
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        monthYearDisplay.textContent = `${monthNames[month]} ${year}`;
+
+        const labels = Array.from(calendarGrid.querySelectorAll('.calendar-day-label'));
+        calendarGrid.innerHTML = '';
+        labels.forEach(l => calendarGrid.appendChild(l));
+
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day other-month';
+            day.textContent = prevMonthDays - i;
+            calendarGrid.appendChild(day);
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day';
+            day.textContent = i;
+
+            const thisDate = new Date(year, month, i);
+            const today = new Date();
+            if (thisDate.toDateString() === today.toDateString()) day.classList.add('today');
+            if (calSelectedDate && thisDate.toDateString() === calSelectedDate.toDateString()) day.classList.add('selected');
+
+            day.onclick = (e) => {
+                e.stopPropagation();
+                calSelectedDate = thisDate;
+                hiddenExpiry.value = thisDate.toISOString().split('T')[0];
+                selectedText.textContent = thisDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                calendarPopup.classList.remove('show');
+                calendarToggle.classList.remove('active');
+                renderCalendar(date);
+            };
+            calendarGrid.appendChild(day);
+        }
+    };
+
+    if (calendarToggle) {
+        calendarToggle.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = calendarPopup.classList.contains('show');
+            closeAllPopups();
+            if (!isOpen) {
+                calendarPopup.classList.add('show');
+                calendarToggle.classList.add('active');
+                renderCalendar(calCurrentDate);
+            }
+        };
+
+        document.getElementById('prev-month').onclick = (e) => {
+            e.stopPropagation();
+            calCurrentDate.setMonth(calCurrentDate.getMonth() - 1);
+            renderCalendar(calCurrentDate);
+        };
+
+        document.getElementById('next-month').onclick = (e) => {
+            e.stopPropagation();
+            calCurrentDate.setMonth(calCurrentDate.getMonth() + 1);
+            renderCalendar(calCurrentDate);
+        };
+
+        document.getElementById('clear-date').onclick = (e) => {
+            e.stopPropagation();
+            calSelectedDate = null;
+            hiddenExpiry.value = '';
+            selectedText.textContent = 'No Expiration Set';
+            closeAllPopups();
+        };
+
+        document.getElementById('set-today').onclick = (e) => {
+            e.stopPropagation();
+            calSelectedDate = new Date();
+            calCurrentDate = new Date(calSelectedDate);
+            hiddenExpiry.value = calSelectedDate.toISOString().split('T')[0];
+            selectedText.textContent = calSelectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+            closeAllPopups();
+            renderCalendar(calCurrentDate);
+        };
+    }
+
+    const closeAllPopups = () => {
+        if (calendarPopup) calendarPopup.classList.remove('show');
+        if (calendarToggle) calendarToggle.classList.remove('active');
+        if (envMenu) {
+            envMenu.classList.remove('show');
+            envToggle.classList.remove('active');
+        }
+    };
+
+    // Global close
+    document.addEventListener('click', () => closeAllPopups());
 
     loadKeys();
 });

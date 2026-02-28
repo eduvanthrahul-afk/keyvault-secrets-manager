@@ -8,10 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inviteForm = document.getElementById('invite-form');
     const closeInviteModal = document.getElementById('close-invite-modal');
     const cancelInvite = document.getElementById('cancel-invite');
-    const userEmailDisplay = document.getElementById('user-email-display');
     const currentUserEmail = (localStorage.getItem('user_email') || '').toLowerCase();
-
-    if (userEmailDisplay) userEmailDisplay.textContent = localStorage.getItem('user_email');
 
     // Auth check
     if (!localStorage.getItem('jwt_token')) {
@@ -19,43 +16,96 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    let currentMembers = [];
+
     const loadProjects = async () => {
         try {
             const projects = await ApiClient.projects.getAll();
-            projectSelector.innerHTML = '<option value="">Select a workspace...</option>';
+            const menu = document.getElementById('dropdown-menu');
+            const toggle = document.getElementById('dropdown-toggle');
+            const selectedText = document.getElementById('dropdown-selected-text');
+            const hiddenInput = document.getElementById('project-selector');
+
+            menu.innerHTML = '';
+
+            // Add "Select Architecture" as first item
+            const defaultItem = document.createElement('div');
+            defaultItem.className = 'dropdown-item';
+            defaultItem.innerHTML = `<i class="fa-solid fa-cube"></i> <span>Select Architecture...</span>`;
+            defaultItem.onclick = () => {
+                selectProject('', 'Select Architecture...', hiddenInput, selectedText, menu, toggle);
+            };
+            menu.appendChild(defaultItem);
+
             projects.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                projectSelector.appendChild(opt);
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.innerHTML = `<i class="fa-solid fa-folder-closed"></i> <span>${p.name}</span>`;
+                item.onclick = () => {
+                    selectProject(p.id, p.name, hiddenInput, selectedText, menu, toggle);
+                };
+                menu.appendChild(item);
             });
+
+            // Toggle logic
+            toggle.onclick = (e) => {
+                e.stopPropagation();
+                const isOpen = menu.classList.contains('show');
+                closeAllDropdowns();
+                if (!isOpen) {
+                    menu.classList.add('show');
+                    toggle.classList.add('active');
+                }
+            };
+
+            // Global close
+            document.addEventListener('click', () => closeAllDropdowns());
+
         } catch (err) {
             console.error('Failed to load projects:', err);
         }
     };
 
-    const loadMembers = async (projectId) => {
+    const closeAllDropdowns = () => {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.dropdown-toggle').forEach(t => t.classList.remove('active'));
+    };
+
+    const selectProject = (id, name, input, textElem, menu, toggle) => {
+        input.value = id;
+        textElem.textContent = name;
+        menu.classList.remove('show');
+        toggle.classList.remove('active');
+        loadMembers(id, name);
+    };
+
+    const loadMembers = async (projectId, projectName) => {
         if (!projectId) {
             membersSection.style.display = 'none';
             emptyState.style.display = 'block';
             addMemberBtn.style.display = 'none';
+            document.getElementById('search-container').style.display = 'none';
+            document.getElementById('project-title-display').textContent = 'Registry';
             return;
         }
 
         try {
-            const members = await ApiClient.projects.getMembers(projectId) || [];
+            document.getElementById('project-title-display').textContent = projectName;
+            document.getElementById('search-container').style.display = 'block';
 
-            // Case-insensitive role check with null safety
-            const me = members.find(m => m.email && m.email.toLowerCase() === currentUserEmail);
-            const isOwner = me && me.role && me.role.toUpperCase() === 'OWNER';
+            currentMembers = await ApiClient.projects.getMembers(projectId) || [];
 
-            if (isOwner) {
+            const me = currentMembers.find(m => m.email && m.email.toLowerCase() === currentUserEmail);
+            const myRole = me && me.role ? me.role.toUpperCase() : 'VIEWER';
+            const canManageMembers = ['ADMIN', 'OWNER'].includes(myRole);
+
+            if (canManageMembers) {
                 addMemberBtn.style.display = 'flex';
             } else {
                 addMemberBtn.style.display = 'none';
             }
 
-            renderMembers(members, isOwner);
+            renderMembers(currentMembers, canManageMembers, myRole);
             membersSection.style.display = 'block';
             emptyState.style.display = 'none';
         } catch (err) {
@@ -63,38 +113,106 @@ document.addEventListener('DOMContentLoaded', async () => {
             membersSection.style.display = 'none';
             emptyState.style.display = 'block';
             addMemberBtn.style.display = 'none';
+            document.getElementById('search-container').style.display = 'none';
         }
     };
 
-    const renderMembers = (members, isOwner) => {
+    const renderMembers = (members, canManageMembers, myRole) => {
         membersList.innerHTML = '';
+
+        // Update Stats
+        const totalCount = members.length;
+        const adminCount = members.filter(m => ['ADMIN', 'OWNER'].includes((m.role || '').toUpperCase())).length;
+        const uniqueRoles = new Set(members.map(m => (m.role || 'VIEWER').toUpperCase())).size;
+
+        const statTotal = document.getElementById('stat-total-members');
+        const statAdmins = document.getElementById('stat-admins');
+        const statRoles = document.getElementById('stat-roles');
+
+        if (statTotal) statTotal.textContent = totalCount;
+        if (statAdmins) statAdmins.textContent = adminCount;
+        if (statRoles) statRoles.textContent = uniqueRoles;
+
+        if (members.length === 0) {
+            membersList.innerHTML = '<div style="padding: 4rem; text-align: center; color: var(--text-muted); grid-column: 1/-1;">No members found in this workspace registry.</div>';
+            return;
+        }
+
         members.forEach(m => {
             const isSelf = m.email.toLowerCase() === currentUserEmail;
-            const item = document.createElement('div');
-            item.className = 'key-item';
-            item.style.gridTemplateColumns = '2fr 1fr auto';
-            item.innerHTML = `
-                <div>
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.25rem;">Member Email</div>
-                    <div style="font-weight: 600; color: var(--text-main);">${m.email} ${isSelf ? '<span style="color: var(--primary); font-size: 0.7rem; font-weight: 500;">(You)</span>' : ''}</div>
+            const targetRole = (m.role || '').toUpperCase();
+            const initial = m.email.charAt(0).toUpperCase();
+
+            const card = document.createElement('div');
+            card.className = 'member-card';
+
+            const canEditRole = canManageMembers && !isSelf && targetRole !== 'OWNER' && !(targetRole === 'ADMIN' && myRole !== 'OWNER');
+
+            let roleControl = '';
+            if (canEditRole) {
+                const isAdminOptionDisabled = myRole !== 'OWNER' ? 'disabled' : '';
+                roleControl = `
+                    <select class="select role-select" data-email="${m.email}" style="padding: 4px 8px; font-size: 12px; width: auto; height: 32px; border-radius: 8px;">
+                        <option value="VIEWER" ${targetRole === 'VIEWER' ? 'selected' : ''}>Viewer</option>
+                        <option value="EDITOR" ${targetRole === 'EDITOR' ? 'selected' : ''}>Editor</option>
+                        <option value="ADMIN" ${targetRole === 'ADMIN' ? 'selected' : ''} ${isAdminOptionDisabled}>Admin</option>
+                    </select>
+                `;
+            } else {
+                roleControl = `<span class="role-badge-pill ${targetRole.toLowerCase()}">${targetRole}</span>`;
+            }
+
+            const canRemove = canManageMembers && targetRole !== 'OWNER' && !isSelf && !(targetRole === 'ADMIN' && myRole !== 'OWNER');
+
+            card.innerHTML = `
+                <div class="member-header">
+                    <div class="member-avatar">${initial}</div>
+                    <div class="member-info">
+                        <span class="member-email" title="${m.email}">${m.email}</span>
+                        <div class="member-status">
+                            <span class="status-indicator green" style="width: 6px; height: 6px; margin: 0;"></span>
+                            <span>${isSelf ? 'You (Current Session)' : 'Active Workspace Member'}</span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.25rem;">Role</div>
-                    <span class="badge ${(m.role || '').toUpperCase() === 'OWNER' ? 'badge-prod' : 'badge-dev'}">${m.role || 'MEMBER'}</span>
-                </div>
-                <div style="text-align: right;">
-                    ${(isOwner && (m.role || '').toUpperCase() !== 'OWNER' && !isSelf) ? `
-                        <button class="btn btn-ghost remove-member-btn" data-email="${m.email}" style="color: var(--error); padding: 0.5rem;" title="Remove Member">
-                            <i class="fa-solid fa-user-minus"></i>
-                        </button>
-                    ` : ''}
+                <div class="member-footer">
+                    <div>${roleControl}</div>
+                    <div class="member-actions">
+                        ${canRemove ? `
+                            <button class="action-btn-mini danger remove-member-btn" data-email="${m.email}" title="Revoke Membership">
+                                <i class="fa-solid fa-user-xmark"></i>
+                            </button>
+                        ` : `
+                            <div class="action-btn-mini" style="opacity: 0.3; cursor: not-allowed;" title="Permission Locked">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                        `}
+                    </div>
                 </div>
             `;
-            membersList.appendChild(item);
+            membersList.appendChild(card);
         });
 
-        // Add event listeners for removal
-        if (isOwner) {
+        // Add event listeners for removal and role change
+        if (canManageMembers) {
+            document.querySelectorAll('.role-select').forEach(select => {
+                select.onchange = async (e) => {
+                    const email = select.getAttribute('data-email');
+                    const newRole = select.value;
+                    try {
+                        const projectId = projectSelector.value;
+                        select.disabled = true;
+                        await ApiClient.projects.updateMemberRole(projectId, email, newRole);
+                        notifications.showToast('Policy Updated', `Access level for ${email} modified to ${newRole}.`, 'success');
+                    } catch (err) {
+                        notifications.showToast('Update Failed', err.message, 'error');
+                        await loadMembers(projectSelector.value); // reset visual state
+                    } finally {
+                        select.disabled = false;
+                    }
+                };
+            });
+
             document.querySelectorAll('.remove-member-btn').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.preventDefault();
@@ -102,16 +220,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const email = btn.getAttribute('data-email');
                     if (!email) return;
 
-                    if (confirm(`Are you sure you want to remove member ${email}?`)) {
+                    const confirmed = await notifications.confirm(
+                        'Revoke Membership',
+                        `Are you sure you want to remove ${email} from this workspace architecture? They will lose all cryptographic access.`,
+                        'Revoke Access'
+                    );
+
+                    if (confirmed) {
                         try {
                             const projectId = projectSelector.value;
-                            console.log(`Attempting to remove member ${email} from project ${projectId}`);
                             await ApiClient.projects.removeMember(projectId, email);
-                            console.log('Member removed successfully');
-                            await loadMembers(projectId); // Reload list
+                            notifications.showToast('Access Revoked', `User ${email} removed from registry.`, 'success');
+                            await loadMembers(projectId);
                         } catch (err) {
-                            console.error('Removal Error:', err);
-                            alert('Failed to remove member: ' + err.message);
+                            notifications.showToast('Revocation Failed', err.message, 'error');
                         }
                     }
                 };
@@ -129,26 +251,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         const projectId = projectSelector.value;
         const email = document.getElementById('invite-email').value;
+        const role = document.getElementById('invite-role').value;
 
         try {
-            await ApiClient.projects.addMember(projectId, email);
+            await ApiClient.projects.addMember(projectId, email, role);
             inviteModal.style.display = 'none';
             inviteForm.reset();
+            notifications.showToast('Invite Dispatched', `Security credentials initialized for ${email}.`, 'success');
             loadMembers(projectId);
         } catch (err) {
-            alert(err.message);
+            notifications.showToast('Dispatch Failed', err.message, 'error');
         }
     };
 
-    await loadProjects();
 
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.onclick = async () => {
-            localStorage.clear();
-            sessionStorage.clear();
-            await CryptoModule.clearSessionVault();
-            window.location.href = 'login.html';
-        };
-    }
+    document.getElementById('member-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const filtered = currentMembers.filter(m =>
+            m.email.toLowerCase().includes(query) ||
+            (m.role || '').toLowerCase().includes(query)
+        );
+
+        const me = currentMembers.find(m => m.email && m.email.toLowerCase() === currentUserEmail);
+        const myRole = me && me.role ? me.role.toUpperCase() : 'VIEWER';
+        const canManageMembers = ['ADMIN', 'OWNER'].includes(myRole);
+
+        renderMembers(filtered, canManageMembers, myRole);
+    });
+
+    await loadProjects();
 });

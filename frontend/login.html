@@ -10,39 +10,78 @@
 </head>
 
 <body class="auth-page">
-    <main class="auth-card fade-in">
-        <header style="text-align: center; margin-bottom: 2.5rem;">
-            <div class="logo-container" style="justify-content: center; margin-bottom: 1.5rem;">
-                <div class="app-logo" style="width: 48px; height: 48px;"></div>
+    <div class="auth-wrapper fade-in">
+        <div class="auth-side-info">
+            <div class="app-logo">
+                <i class="fa-solid fa-vault" style="color: white; font-size: 24px;"></i>
             </div>
-            <h1 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Welcome back</h1>
-            <p class="text-muted">Enter your credentials to access your vault.</p>
-        </header>
+            <h1 class="auth-info-title">Secure Your API Infrastructure</h1>
+            <p class="auth-info-desc">Professional-grade secrets management for engineering teams. Protect your keys,
+                manage access, and monitor forensic logs in one high-security vault.</p>
 
-        <form id="login-form">
-            <div class="form-group">
-                <label for="email" class="label">Work Email</label>
-                <input type="email" id="email" class="input" placeholder="name@company.com" required>
-            </div>
-            <div class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <label for="password" class="label" style="margin: 0;">Master Password</label>
-                    <a href="#"
-                        style="font-size: 0.75rem; color: var(--text-secondary); text-decoration: none;">Forgot?</a>
-                </div>
-                <input type="password" id="password" class="input" placeholder="••••••••" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 1rem;">
-                Sign in to KeyVault
-            </button>
-        </form>
+            <ul class="feature-hints">
+                <li class="feature-hint-item">
+                    <div class="feature-hint-icon"><i class="fa-solid fa-shield-check"></i></div>
+                    <div class="feature-hint-text">
+                        <b>End-to-End Encryption</b>
+                        <span>AES-256-GCM protection for every cryptographic secret.</span>
+                    </div>
+                </li>
+                <li class="feature-hint-item">
+                    <div class="feature-hint-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div class="feature-hint-text">
+                        <b>Team Access Controls</b>
+                        <span>Role-based fine-grained permissions for workspace members.</span>
+                    </div>
+                </li>
+                <li class="feature-hint-item">
+                    <div class="feature-hint-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+                    <div class="feature-hint-text">
+                        <b>Forensic Audit Monitoring</b>
+                        <span>Real-time security timeline of all high-stakes operations.</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
 
-        <footer
-            style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--border-base); padding-top: 2rem;">
-            <p class="text-muted">Don't have an account? <a href="register.html"
-                    style="color: var(--primary); font-weight: 600; text-decoration: none;">Create one</a></p>
-        </footer>
-    </main>
+        <div class="auth-side-form">
+            <main class="auth-card">
+                <header style="margin-bottom: 2.5rem;">
+                    <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.04em;">
+                        Welcome Back</h2>
+                    <p class="text-muted">Enter your credentials to access your vault.</p>
+                </header>
+
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email" class="label">Work Email</label>
+                        <input type="email" id="email" class="input" placeholder="name@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="password" class="label" style="margin: 0;">Master Password</label>
+                            <a href="#"
+                                style="font-size: 0.75rem; color: var(--accent-1); text-decoration: none; font-weight: 600;">Forgot
+                                Passkey?</a>
+                        </div>
+                        <input type="password" id="password" class="input" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; padding: 12px; margin-top: 1rem; border-radius: 12px; font-weight: 700;">
+                        Sign in to Workspace
+                    </button>
+                </form>
+
+                <footer
+                    style="margin-top: 2.5rem; border-top: 1px solid var(--border-soft); padding-top: 2rem; text-align: center;">
+                    <p class="text-muted" style="font-size: 14px;">New to KeyVault? <a href="register.html"
+                            style="color: var(--accent-1); font-weight: 700; text-decoration: none;">Create Enterprise
+                            Account</a></p>
+                </footer>
+            </main>
+        </div>
+    </div>
 
     <script src="js/api.js"></script>
     <script src="js/crypto.js"></script>

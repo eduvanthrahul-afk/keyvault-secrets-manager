@@ -24,14 +24,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             allProjects = await ApiClient.projects.getAll();
             renderProjects(allProjects);
             updateStats(allProjects);
+
+            const welcomeCount = document.getElementById('welcome-project-count');
+            if (welcomeCount) welcomeCount.textContent = allProjects.length;
         } catch (err) {
             console.error(err);
             projectList.innerHTML = `
-                <div style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px solid var(--error-border); background: var(--error-bg); border-radius: var(--radius-xl);">
-                    <div style="font-size: 2rem; margin-bottom: 1rem; color: var(--error);">⚠️</div>
-                    <h3 style="margin-bottom: 0.5rem; color: var(--error);">Failed to load projects</h3>
-                    <p class="text-muted">${err.message}</p>
-                    <button class="btn btn-ghost" onclick="window.location.reload()" style="margin-top: 1rem;">Try again</button>
+                <div style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px solid var(--error-border); background: var(--error-bg); border-radius: 24px;">
+                    <div style="font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--error);">⚠️</div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--error); font-weight: 700;">Registry Synchronization Failed</h3>
+                    <p class="text-muted" style="max-width: 400px; margin: 0 auto;">${err.message}</p>
+                    <button class="btn btn-primary" onclick="window.location.reload()" style="margin-top: 1.5rem;">Re-establish Connection</button>
                 </div>
             `;
         }
@@ -44,7 +47,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (statProjects) statProjects.textContent = projects.length;
 
-        // Fetch all keys to count them
         try {
             let totalKeys = 0;
             let totalExpiring = 0;
@@ -55,7 +57,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const keys = await ApiClient.keys.getByProject(project.id);
                 totalKeys += keys.length;
 
-                // Count expiring
                 keys.forEach(k => {
                     if (k.expiryDate) {
                         const expiry = new Date(k.expiryDate);
@@ -73,26 +74,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.deleteProject = async (id, name, event) => {
         if (event) event.stopPropagation();
-        if (!confirm(`Are you sure you want to delete the project "${name}" and all its API keys? This action cannot be undone.`)) {
-            return;
-        }
+
+        const confirmed = await notifications.confirm(
+            'Purge Security Context',
+            `Are you sure you want to delete the workspace "${name}"? This will permanently revoke all associated API keys and credentials.`,
+            'Confirm Purge'
+        );
+
+        if (!confirmed) return;
 
         try {
             await ApiClient.projects.delete(id);
+            notifications.showToast('Workspace Purged', `The context "${name}" has been removed from the registry.`, 'success');
             loadProjects();
         } catch (err) {
-            alert('Failed to delete project: ' + err.message);
+            notifications.showToast('Purge Failed', err.message, 'error');
         }
     };
+
 
     const renderProjects = (projects) => {
         projectList.innerHTML = '';
         if (projects.length === 0) {
             projectList.innerHTML = `
-                <div style="grid-column: 1/-1; padding: 4rem; text-align: center; border: 1px dashed var(--border-base); border-radius: var(--radius-xl); opacity: 0.6;">
-                    <div style="font-size: 2rem; margin-bottom: 1rem;">📁</div>
-                    <h3 style="margin-bottom: 0.5rem;">${projectSearch && projectSearch.value ? 'No matching projects' : 'No active projects'}</h3>
-                    <p class="text-muted">${projectSearch && projectSearch.value ? 'Try a different search term.' : 'Create your first project to begin securing API keys.'}</p>
+                <div style="grid-column: 1/-1; padding: 6rem 24px; text-align: center; border: 1px dashed var(--border); border-radius: 24px; background: var(--surface-1);">
+                    <div style="font-size: 3rem; margin-bottom: 1.5rem; opacity: 0.5;">📂</div>
+                    <h3 style="margin-bottom: 0.5rem; font-weight: 700;">${projectSearch && projectSearch.value ? 'No Matching Contexts' : 'Registry Empty'}</h3>
+                    <p class="text-muted" style="max-width: 320px; margin: 0 auto;">${projectSearch && projectSearch.value ? 'No workspace matches your search term in the secure registry.' : 'Initialize your first security context to begin managing encrypted API keys.'}</p>
                 </div>
             `;
             return;
@@ -100,33 +108,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         projects.forEach(project => {
             const card = document.createElement('div');
-            card.className = 'card';
-            card.setAttribute('role', 'button');
-            card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', `Project: ${project.name}`);
+            card.className = 'project-card-premium';
+
+            const tag = (project.tag || 'Unset').toLowerCase();
+            const isProd = tag === 'prod' || tag === 'production';
+            const currentUserEmail = (localStorage.getItem('user_email') || '').toLowerCase().trim();
+            const projectOwnerEmail = (project.ownerEmail || '').toLowerCase().trim();
+            const isOwner = projectOwnerEmail === currentUserEmail;
 
             card.onclick = () => {
                 sessionStorage.setItem('current_project', JSON.stringify(project));
                 window.location.href = `project.html?id=${project.id}`;
             };
-            card.onkeypress = (e) => { if (e.key === 'Enter') card.onclick(); };
 
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                    <div style="width: 40px; height: 40px; background: var(--bg-muted); border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-base);">
-                        <i class="fa-solid fa-folder-closed" style="color: var(--text-secondary);"></i>
+                <div class="top-bar">
+                    <div class="project-icon-square">
+                        <i class="fa-solid fa-folder-closed"></i>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <span class="badge ${project.tag?.toLowerCase() === 'prod' || project.tag?.toLowerCase() === 'production' ? 'badge-prod' : 'badge-dev'}">${project.tag || 'Unset'}</span>
-                        <button class="btn btn-ghost" onclick="deleteProject('${project.id}', '${project.name}', event)" style="padding: 0.25rem 0.5rem; color: var(--error);" title="Delete Project">
-                            <i class="fa-solid fa-trash-can"></i>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="project-tag-pill ${isProd ? 'badge-prod' : 'badge-dev'}">${tag}</span>
+                        ${isOwner ? `
+                        <button class="btn btn-ghost" onclick="deleteProject('${project.id}', '${project.name}', event)" style="width: 32px; height: 32px; padding: 0; color: var(--error); border-radius: 8px;" title="Purge Context">
+                            <i class="fa-solid fa-trash-can" style="font-size: 13px;"></i>
                         </button>
+                        ` : ''}
                     </div>
                 </div>
-                <h3>${project.name}</h3>
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-base); display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
-                    <span>Security Vault</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <div class="body">
+                    <h3 class="project-name-h3">${project.name}</h3>
+                    <p class="text-meta" style="line-height: 1.4;">Active security vault containing managed secret keys and team access policies.</p>
+                </div>
+                <div class="footer">
+                    <span>Manage Keys & Access</span>
+                    <i class="fa-solid fa-chevron-right" style="font-size: 10px; opacity: 0.5;"></i>
                 </div>
             `;
             projectList.appendChild(card);
@@ -157,11 +172,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             await ApiClient.projects.create({ name, tag });
             projectModal.style.display = 'none';
             projectForm.reset();
+            notifications.showToast('Workspace Created', `Successfully initialized context "${name}".`, 'success');
             loadProjects();
         } catch (err) {
-            alert('Failed to create project: ' + err.message);
+            notifications.showToast('Creation Failed', err.message, 'error');
         }
     };
+
 
     loadProjects();
 });

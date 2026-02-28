@@ -4,162 +4,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KeyVault | Secure Zero-Knowledge API Key Management</title>
+    <title>KeyVault | Scalable Infrastructure for API Security</title>
     <link rel="stylesheet" href="css/landing.css">
     <meta name="description"
-        content="Manage your API keys with zero-knowledge encryption. Keys are encrypted client-side and never leave your browser unencrypted.">
+        content="Enterprise-ready API key management with zero-knowledge encryption. Scalable, secure, and developer-first.">
 </head>
 
 <body>
-    <!-- Cursor Glow -->
-    <div class="cursor-glow" id="glow"></div>
+    <div class="grid-bg"></div>
+    <div class="matrix-overlay"></div>
 
-    <!-- Navbar -->
-    <header class="nav-container">
-        <a href="landing.html" class="nav-brand">
-            <div class="brand-icon">K</div>
-            <span>KeyVault</span>
-        </a>
-        <nav class="nav-links">
-            <a href="login.html" class="btn btn-ghost">Sign In</a>
-            <a href="register.html" class="btn btn-primary">Create Vault</a>
-        </nav>
+    <!-- Navigation -->
+    <header class="header">
+        <div class="nav-container">
+            <a href="landing.html" class="logo">
+                <div class="logo-box">K</div>
+                <span>KeyVault</span>
+            </a>
+            <nav class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#developers">Infrastructure</a>
+                <a href="#security">Security</a>
+            </nav>
+            <div class="nav-cta">
+                <a href="login.html" class="btn-ghost"
+                    style="text-decoration: none; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-right: 20px;">Sign
+                    In</a>
+                <a href="register.html" class="btn-primary"
+                    style="padding: 10px 24px; background: var(--fg); color: var(--bg); border-radius: 8px; font-weight: 800; text-decoration: none; font-size: 0.85rem;">Get
+                    Started</a>
+            </div>
+        </div>
     </header>
 
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section class="hero">
         <div class="reveal active">
-            <span class="badge">Zero-Knowledge Architecture</span>
-            <h1>Bank-grade security<br>for your API keys.</h1>
-            <p>Stop storing secrets in plain text. KeyVault encrypts everything locally before it ever reaches our
-                servers. You hold the only master key.</p>
+            <div class="meta-tag">
+                <span style="color: var(--accent-secondary);">●</span> Secure Infrastructure Protocol
+            </div>
+            <h1>Secure your stack<br>without the friction.</h1>
+            <p>High-performance API key management for engineering teams. Zero-knowledge encryption meets global
+                scalability. Built for the modern developer.</p>
             <div style="display: flex; gap: 1.5rem; justify-content: center;">
-                <a href="register.html" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1rem;">Get
-                    Started Free</a>
-                <a href="#security" class="btn btn-ghost"
-                    style="padding: 1rem 2rem; border: 1px solid var(--glass-border);">Security Details</a>
+                <a href="register.html" class="btn-ultra"
+                    style="background: var(--fg); color: var(--bg); padding: 18px 48px; border-radius: 12px; font-weight: 900; text-decoration: none; font-size: 1.1rem; box-shadow: 0 20px 40px rgba(255,255,255,0.1);">Deploy
+                    Enterprise Vault</a>
             </div>
         </div>
 
-        <!-- CSS Animated Mockup -->
-        <div class="dashboard-mockup reveal">
-            <div class="mockup-header">
-                <div class="dot dot-r"></div>
-                <div class="dot dot-y"></div>
-                <div class="dot dot-g"></div>
-            </div>
-            <div class="mockup-grid">
-                <div class="sidebar-sim">
-                    <div
-                        style="width: 80%; height: 20px; background: rgba(255,255,255,0.05); margin-bottom: 2rem; border-radius: 4px;">
-                    </div>
-                    <div
-                        style="width: 60%; height: 15px; background: rgba(255,255,255,0.03); margin-bottom: 1rem; border-radius: 4px;">
-                    </div>
-                    <div
-                        style="width: 70%; height: 15px; background: rgba(255,255,255,0.03); margin-bottom: 1rem; border-radius: 4px;">
+        <!-- Advanced Interactive Cryptography Dashboard -->
+        <div class="hero-visual reveal">
+            <div class="hero-visual-inner">
+                <div class="crypto-grid"></div>
+                <div class="scan-line"></div>
+
+                <!-- Center Animated Vault Core -->
+                <div class="vault-center">
+                    <div class="vault-ring outer-ring"></div>
+                    <div class="vault-ring middle-ring"></div>
+                    <div class="vault-ring inner-ring"></div>
+                    <div class="vault-core-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
                     </div>
                 </div>
-                <div class="content-sim">
-                    <div class="stat-card-sim"></div>
-                    <div class="stat-card-sim"></div>
-                    <div class="stat-card-sim"></div>
-                    <div class="huge-card-sim">
-                        ENCRYPTED_VAULT_ACTIVE: [AES-256-GCM] - SHA-256 SALT ATTACHED
+
+                <!-- Telemetry Flow -->
+                <svg class="connection-lines" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+                    <!-- Left paths -->
+                    <path class="animated-path" d="M 0,100 L 300,100 L 450,250" />
+                    <path class="animated-path" d="M 0,250 L 400,250 L 450,250" />
+                    <path class="animated-path" d="M 0,400 L 300,400 L 450,250" />
+                    <!-- Right paths -->
+                    <path class="animated-path secondary" d="M 1000,100 L 700,100 L 550,250" />
+                    <path class="animated-path secondary" d="M 1000,250 L 600,250 L 550,250" />
+                    <path class="animated-path secondary" d="M 1000,400 L 700,400 L 550,250" />
+                </svg>
+
+                <div class="telemetry-container">
+                    <div class="telemetry-panel left-panel">
+                        <div class="t-node valid"><span class="t-dot"></span> <span class="t-text">LOCAL_AUTH_HANDSHAKE:
+                                OK</span></div>
+                        <div class="t-node valid"><span class="t-dot"></span> <span class="t-text">AES_GCM_PROVIDER:
+                                ACTIVE</span></div>
+                        <div class="t-node valid"><span class="t-dot"></span> <span class="t-text">MASTER_SECRET_READY:
+                                TRUE</span></div>
+                        <div class="t-node active"><span class="t-dot"></span> <span class="t-text">SALT_ITERATION:
+                                100,000</span></div>
+                        <div class="t-node" style="margin-top: auto;"><span class="t-dot"></span> <span
+                                class="t-text">NODE_STATUS: SECURE</span></div>
+                    </div>
+                    <div class="telemetry-panel right-panel">
+                        <div class="t-node processing"><span class="t-spinner"></span> <span
+                                class="t-text">ENCRYPTING_BUFFER...</span></div>
+                        <div class="t-node valid"><span class="t-dot"></span> <span class="t-text">W_CRYPTO_API:
+                                CONNECTED</span></div>
+                        <div class="t-node processing"><span class="t-spinner"></span> <span
+                                class="t-text">PBKDF2_STRETCHING...</span></div>
+                        <div class="t-node active"><span class="t-dot"></span> <span class="t-text">KEY_DERIVATION:
+                                ONGOING</span></div>
+                        <div class="t-node" style="margin-top: auto;"><span class="t-dot"></span> <span
+                                class="t-text">VAULT_READY</span></div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="section-features" id="features">
-        <div class="feat-grid">
-            <div class="feat-card reveal">
-                <span class="feat-icon">�</span>
-                <h3>True Zero-Knowledge</h3>
-                <p>We use PBKDF2 with 100,000+ iterations to derive your key locally. Your master password never touches
-                    the cloud—period.</p>
+    <!-- Bento Grid Section -->
+    <section class="section" id="features">
+        <div class="section-title reveal">
+            <span class="card-label">The Blueprint</span>
+            <h2>Security by design.</h2>
+            <p>A multi-layered architecture engineered for total cryptographic isolation.</p>
+        </div>
+
+        <div class="bento-grid">
+            <div class="bento-card w-8 reveal">
+                <span class="card-label">Protocol 01</span>
+                <h3>Zero-Knowledge Architecture</h3>
+                <p>We leverage the Web Crypto API to ensure your keys never leave your device in plain text. Your master
+                    password is the only master key—and we never touch it.</p>
             </div>
-            <div class="feat-card reveal">
-                <span class="feat-icon">⚡</span>
-                <h3>Developer Velocity</h3>
-                <p>Quickly access, copy, and organize keys across projects. No more hunting through .env files or
-                    post-it notes.</p>
+            <div class="bento-card w-4 reveal">
+                <span class="card-label">Protocol 02</span>
+                <h3>CLI Native</h3>
+                <p>Seamlessly inject environment variables into your local dev or CI/CD pipelines. No more `.env` leaks.
+                </p>
             </div>
-            <div class="feat-card reveal">
-                <span class="feat-icon">🛡️</span>
-                <h3>Expiry Protection</h3>
-                <p>Set expiry dates for sensitive service tokens and get notified via encrypted email alerts 7 days
-                    before they expire.</p>
+            <div class="bento-card w-4 h-2 reveal">
+                <span class="card-label">Protocol 03</span>
+                <h3>Team RBAC</h3>
+                <p>Assign granular permissions. Owners, Admins, and Viewers. Scale your organization without
+                    compromising security headers or project boundaries.</p>
+            </div>
+            <div class="bento-card w-8 reveal">
+                <span class="card-label">Protocol 04</span>
+                <h3>Forensic Audit Monitoring</h3>
+                <p>Full observability into your secrets. Track every access event and modification with a
+                    cryptographically signed audit log. Immutable and secure.</p>
+            </div>
+            <div class="bento-card w-8 reveal">
+                <span class="card-label">Protocol 05</span>
+                <h3>Automated Rotation</h3>
+                <p>Schedule key rotations and receive encrypted notifications before expiration. Maintain security
+                    hygiene across your entire cloud infrastructure.</p>
             </div>
         </div>
     </section>
 
-    <!-- Security Spotlight -->
-    <section class="encryption-section" id="security">
-        <div class="enc-content reveal">
-            <h2 style="font-size: 3.5rem; margin-bottom: 2rem; line-height: 1.1;">Privacy isn't a feature.<br>It's the
-                foundation.</h2>
-            <p style="color: var(--text-muted); margin-bottom: 3rem; font-size: 1.1rem;">
-                KeyVault leverages the <strong>Web Crypto API</strong> to handle cryptographic operations directly in
-                your browser's secure context. Your data is scrambled before transit, ensuring that even if our database
-                was public, your secrets remain safe.
-            </p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                <div style="border-left: 2px solid var(--acc-primary); padding-left: 1.5rem;">
-                    <div style="font-size: 1.5rem; font-weight: 800;">AES-GCM</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Authentic Encryption</p>
+    <!-- Tech Deep Dive -->
+    <section class="section">
+        <div class="reveal">
+            <div class="tech-box">
+                <div class="tech-info">
+                    <span class="card-label">Core Performance</span>
+                    <h2>Scalable secret management.</h2>
+                    <p style="color: var(--text-muted); font-size: 1.25rem;">
+                        Engineered for sub-millisecond encryption and global distribution. From local dev to 100M+
+                        requests.
+                    </p>
+                    <div class="tech-stats">
+                        <div class="stat-item">
+                            <h4>256-bit</h4>
+                            <span>AES Hardware Accelerated</span>
+                        </div>
+                        <div class="stat-item">
+                            <h4>99.9%</h4>
+                            <span>Uptime Guarantee</span>
+                        </div>
+                    </div>
                 </div>
-                <div style="border-left: 2px solid var(--acc-secondary); padding-left: 1.5rem;">
-                    <div style="font-size: 1.5rem; font-weight: 800;">12-byte</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Random IV Per Key</p>
+                <div class="terminal-container">
+                    <div class="terminal">
+                        <div class="term-head">
+                            <div class="t-dot"></div>
+                            <div class="t-dot"></div>
+                            <div class="t-dot"></div>
+                        </div>
+                        <div class="term-body">
+                            <div><span class="t-prompt">$</span> kv-cli vault create <span
+                                    class="success">"Production"</span></div>
+                            <div class="dim">> Initializing RSA-4096... Done</div>
+                            <div class="dim">> Generating Master Key... Done</div>
+                            <div class="dim">> Applying AES-256-GCM...</div>
+                            <div class="success">> Vault "Production" is now LIVE.</div>
+                            <div class="dim" style="margin-top: 10px;">_</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="enc-visual reveal">
-            <div class="orb"></div>
-            <div class="glass-lock">
-                <div style="font-size: 5rem; margin-bottom: 1rem;">�️</div>
-                <div style="font-family: monospace; font-size: 0.7rem; color: var(--acc-primary); opacity: 0.8;">
-                    ENCRYPTING_DATA...</div>
+    </section>
+
+    <!-- The Infinite CTA -->
+    <section class="cta-universe">
+        <div class="reveal">
+            <h2>Ready to secure<br>your stack?</h2>
+            <div style="margin-top: 80px;">
+                <a href="register.html" class="btn-ultra">Create Your Master Vault</a>
+                <p style="color: var(--text-muted); margin-top: 40px; font-size: 1.1rem;">No credit cards. Infinite
+                    security. Deploy in minutes.</p>
             </div>
         </div>
     </section>
 
-    <!-- Final CTA -->
-    <section class="cta-section">
-        <div class="cta-box reveal">
-            <h2 style="font-size: 4rem; margin-bottom: 2rem; font-weight: 800; letter-spacing: -2px;">Secure your stack
-                today.</h2>
-            <p style="color: var(--text-muted); margin-bottom: 3rem; font-size: 1.25rem;">Free for individuals.
-                Encrypted for everyone.</p>
-            <a href="register.html" class="btn btn-primary"
-                style="padding: 1.5rem 4rem; font-size: 1.1rem; border-radius: 20px;">Protect My Keys</a>
+    <!-- Footer Evolution -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="landing.html" class="logo">
+                    <div class="logo-box">K</div>
+                    <span>KeyVault</span>
+                </a>
+                <p style="color: var(--text-muted); margin-top: 24px; font-size: 0.9rem;">The standard for cryptographic
+                    key management.</p>
+            </div>
+            <div class="footer-nav">
+                <div class="footer-col">
+                    <h5>Platform</h5>
+                    <ul>
+                        <li><a href="#">Bento Core</a></li>
+                        <li><a href="#">CLI Integrations</a></li>
+                        <li><a href="#">Pricing</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>Resources</h5>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Audit Logs</a></li>
+                        <li><a href="#">API docs</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>Connect</h5>
+                    <ul>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Twitter</a></li>
+                        <li><a href="#">Discord</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
-            <div class="brand-icon" style="width: 24px; height: 24px; font-size: 0.7rem; border-radius: 6px;">K</div>
-            KeyVault
+        <div style="text-align: center; margin-top: 100px; color: var(--text-muted); font-size: 0.8rem;">
+            &copy; 2026 KeyVault Systems. Engineering Security for the next decade.
         </div>
-        <div style="display: flex; gap: 2rem;">
-            <a href="#" style="color: inherit; text-decoration: none;">Security Audit</a>
-            <a href="#" style="color: inherit; text-decoration: none;">Privacy Policy</a>
-        </div>
-        <div>&copy; 2026 KeyVault Systems.</div>
     </footer>
 
     <script>
-        // Cursor Glow Follower
-        const glow = document.getElementById('glow');
-        window.addEventListener('mousemove', (e) => {
-            glow.style.left = e.clientX + 'px';
-            glow.style.top = e.clientY + 'px';
-        });
-
         // Intersection Observer for Reveal
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -175,9 +272,10 @@
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
             });
         });
     </script>

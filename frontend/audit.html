@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs | KeyVault Pro</title>
+    <!-- Automatic Theme Detection is handled by CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-logo">
+                <a href="dashboard.html" class="logo-container">
+                    <div class="app-logo">
+                        <i class="fa-solid fa-vault" style="color: white; font-size: 14px;"></i>
+                    </div>
+                    <span class="logo-text">KeyVault</span>
+                </a>
+            </div>
+
+            <nav>
+                <div class="nav-label">Overview</div>
+                <a href="dashboard.html" class="nav-link">
+                    <i class="fa-solid fa-house-chimney"></i> Dashboard
+                </a>
+                <a href="teams.html" class="nav-link">
+                    <i class="fa-solid fa-user-group"></i> Teams
+                </a>
+                <a href="audit.html" class="nav-link active">
+                    <i class="fa-solid fa-shield-halved"></i> Audit Logs
+                </a>
+
+                <div class="nav-label">System</div>
+                <a href="#" class="nav-link" style="opacity: 0.4; cursor: not-allowed;">
+                    <i class="fa-solid fa-gears"></i> Settings
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card">
+                    <div class="user-profile-info">
+                        <div class="user-avatar-circle">A</div>
+                        <div class="user-meta-data">
+                            <span id="user-email-display" class="user-email-text">user@example.com</span>
+                            <span class="user-role-text">Administrator</span>
+                        </div>
+                    </div>
+                    <button id="logout-btn" class="sidebar-logout-btn">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Sign out</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-wrapper">
+            <header class="top-nav">
+                <div style="flex: 1;">
+                    <nav aria-label="Breadcrumb">
+                        <ul class="breadcrumb">
+                            <li><a href="dashboard.html">Organization</a></li>
+                            <li><i class="fa-solid fa-chevron-right" style="font-size: 10px; opacity: 0.5;"></i></li>
+                            <li class="active">Audit Protocol</li>
+                        </ul>
+                    </nav>
+                </div>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <button class="btn btn-ghost" style="padding: 8px;"><i
+                            class="fa-solid fa-clock-rotate-left"></i></button>
+                </div>
+            </header>
+
+            <main class="content-area fade-in">
+                <div class="flex-between" style="margin-bottom: 48px;">
+                    <div>
+                        <div>
+                            <h1 style="margin-bottom: 8px; font-size: 32px; font-weight: 800; letter-spacing: -0.03em;">
+                                Audit Session: <span id="project-title-display"
+                                    style="color: var(--accent-1); text-decoration: underline; text-decoration-color: rgba(79, 70, 229, 0.2);">Registry</span>
+                            </h1>
+                            <p class="text-body text-muted" style="max-width: 600px; font-size: 15px;">Monitor
+                                cryptographic access patterns, security events, and administrative rotations.</p>
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; align-items: center; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 4px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02)">
+                        <button class="btn btn-ghost"
+                            style="margin: 0; padding: 6px 16px; border-radius: 6px; font-size: 13px;">7d</button>
+                        <button class="btn btn-ghost"
+                            style="margin: 0; padding: 6px 16px; border-radius: 6px; font-size: 13px; background: var(--surface-2); font-weight: 600; color: var(--text-primary);">30d</button>
+                        <button class="btn btn-ghost"
+                            style="margin: 0; padding: 6px 16px; border-radius: 6px; font-size: 13px;">90d</button>
+                    </div>
+                </div>
+
+                <div class="flex-between"
+                    style="align-items: center; margin-bottom: 40px; background: var(--surface-1); border: 1px solid var(--border); padding: 12px 12px 12px 24px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 24px; flex: 1;">
+                        <div class="form-group" style="margin: 0; max-width: 320px; flex: 1;">
+                            <label for="project-selector-custom" class="sr-only">Select Workspace Context</label>
+                            <div class="custom-dropdown" id="project-dropdown">
+                                <div class="dropdown-toggle" id="dropdown-toggle">
+                                    <i class="fa-solid fa-shield-halved prefix-icon"></i>
+                                    <span id="dropdown-selected-text">Observe Context...</span>
+                                    <i class="fa-solid fa-chevron-down chevron-icon"></i>
+                                </div>
+                                <div class="dropdown-menu" id="dropdown-menu">
+                                    <!-- Options will be injected via JS -->
+                                </div>
+                                <input type="hidden" id="project-selector" value="">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button id="refresh-logs-btn" class="btn btn-secondary"
+                            style="height: 44px; padding: 0 20px; border-radius: 12px;">
+                            <i class="fa-solid fa-arrows-rotate" style="font-size: 13px; margin-right: 8px;"></i> Stream
+                            Live Protocol
+                        </button>
+                    </div>
+                </div>
+
+                <div id="logs-section" style="display: none; animation: fadeIn var(--dur-standard) ease-out;">
+                    <div class="flex-between" style="align-items: flex-end; margin-bottom: 16px;">
+                        <h3 style="font-size: 16px;">Recent Events</h3>
+                        <div class="badge badge-info" style="font-weight: 500; font-size: 11px;">Real-time tracking
+                            enabled</div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 160px;">Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th style="width: 140px;">IP / Source</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body">
+                                <tr>
+                                    <td colspan="5"
+                                        style="padding: 48px; text-align: center; color: var(--text-muted);">
+                                        <i class="fa-solid fa-shield-halved"
+                                            style="font-size: 24px; margin-bottom: 12px; color: var(--border-soft);"></i>
+                                        <div
+                                            style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">
+                                            No active logs in context</div>
+                                        <div>Please select a valid workspace above</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="empty-state" class="empty-state"
+                    style="padding: 100px 40px; border-style: dotted; background: transparent;">
+                    <div
+                        style="width: 64px; height: 64px; background: var(--surface-2); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--text-muted); border: 2px dashed var(--border);">
+                        <i class="fa-solid fa-fingerprint" style="font-size: 24px;"></i>
+                    </div>
+                    <h3 id="empty-state-title"
+                        style="margin-bottom: 12px; font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;">
+                        Awaiting Forensic Context</h3>
+                    <p class="text-muted" id="empty-state-desc"
+                        style="line-height: 1.6; max-width: 320px; margin: 0 auto;">Select a workspace context from the
+                        registry above to monitor the security event timeline and cryptographic footprint.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/audit.js"></script>
+</body>
+
+</html>
