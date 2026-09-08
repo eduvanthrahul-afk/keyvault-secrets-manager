@@ -127,7 +127,7 @@ body {
 
 /* Hero Section (Maximum Impact) */
 .hero {
-    padding: 220px 40px 100px;
+    padding: 100px 40px 100px;
     text-align: center;
     max-width: 1200px;
     margin: 0 auto;
@@ -147,6 +147,8 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.2em;
     margin-bottom: 40px;
+    animation: heroSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.1s;
 }
 
 .hero h1 {
@@ -159,6 +161,8 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    animation: heroSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.25s;
 }
 
 .hero p {
@@ -168,6 +172,25 @@ body {
     margin: 0 auto 64px;
     font-weight: 300;
     line-height: 1.5;
+    animation: heroSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.4s;
+}
+
+.hero .btn-ultra {
+    animation: heroSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0.55s;
+}
+
+@keyframes heroSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Dashboard Mock (Pure CSS) */

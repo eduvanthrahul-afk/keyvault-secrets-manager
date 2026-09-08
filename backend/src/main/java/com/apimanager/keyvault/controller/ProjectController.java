@@ -1,6 +1,8 @@
 package com.apimanager.keyvault.controller;
 
 import com.apimanager.keyvault.dto.ProjectDTO;
+import org.springframework.cache.annotation.Cacheable;
+import com.apimanager.keyvault.dto.ProjectSummaryDTO;
 import com.apimanager.keyvault.dto.ApiKeyDTO;
 import com.apimanager.keyvault.model.Project;
 import com.apimanager.keyvault.model.User;
@@ -13,17 +15,23 @@ import com.apimanager.keyvault.dto.MachineTokenDTO;
 import com.apimanager.keyvault.dto.MachineTokenRequest;
 import com.apimanager.keyvault.model.MachineToken;
 import com.apimanager.keyvault.repository.MachineTokenRepository;
+import com.apimanager.keyvault.model.ApiKeyVersion;
+import com.apimanager.keyvault.repository.ApiKeyVersionRepository;
 import com.apimanager.keyvault.repository.ProjectMemberRepository;
 import com.apimanager.keyvault.service.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.validation.Valid;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,6 +40,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 @Transactional
 public class ProjectController {
+
+    @Autowired
+    private com.apimanager.keyvault.service.RateLimitService rateLimitService;
+
+    @Autowired
+    private jakarta.servlet.http.HttpServletRequest request;
 
     private static final Logger logger = LoggerFactory.getLogger(ProjectController.class);
 
@@ -54,12 +68,18 @@ public class ProjectController {
     private com.apimanager.keyvault.service.AuditService auditService;
 
     @Autowired
+    private ApiKeyVersionRepository apiKeyVersionRepository;
+
+    @Autowired
     private com.apimanager.keyvault.repository.AuditLogRepository auditLogRepository;
 
     @Autowired
     private MachineTokenRepository tokenRepository;
 
-    private User getCurrentUser() {
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    public User getCurrentUser() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
     }
@@ -67,34 +87,62 @@ public class ProjectController {
     @GetMapping("/projects")
     public List<ProjectDTO> getProjects() {
         User user = getCurrentUser();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate nextWeek = today.plusDays(7);
 
-        // High-reliability backfill for owners via service
-        List<Project> ownedProjects = projectRepository.findByUser(user);
-        for (Project p : ownedProjects) {
-            teamService.ensureMembership(p, user);
-        }
+        // Professional Solution: Use high-performance Aggregated Summary query
+        // to prevent N+1 performance degradation. One query for everything.
+        List<ProjectSummaryDTO> summaries = projectRepository.getProjectSummaries(user, today, nextWeek);
+        return summaries.stream()
+                .map(summary -> {
+                    ProjectDTO dto = new ProjectDTO();
+                    dto.setId(summary.getId());
+                    dto.setName(summary.getName());
+                    dto.setTag(summary.getTag());
+                    dto.setOwnerEmail(summary.getOwnerEmail());
+                    dto.setEncryptedProjectKey(summary.getEncryptedProjectKey());
+                    dto.setKeyCount(summary.getKeyCount());
+                    dto.setExpiringKeyCount(summary.getExpiringKeyCount());
+                    return dto;
+                }).collect(Collectors.toList());
+    }
 
-        List<ProjectMember> memberships = projectMemberRepository.findByUser(user);
-        return memberships.stream().map(pm -> {
-            Project p = pm.getProject();
-            ProjectDTO dto = new ProjectDTO();
-            dto.setId(p.getId());
-            dto.setName(p.getName());
-            dto.setTag(p.getTag());
-            // Add owner email for frontend permission handling
-            if (p.getUser() != null) {
-                dto.setOwnerEmail(p.getUser().getEmail());
-            }
-            if (pm.getEncryptedProjectKey() != null) {
-                dto.setEncryptedProjectKey(pm.getEncryptedProjectKey());
-            }
-            return dto;
-        }).collect(Collectors.toList());
+    /**
+     * Optimized Notification Discovery:
+     * Provides a lightweight telemetry endpoint that returns the global
+     * security risk state (expiring key count) across all contexts.
+     * 
+     * Uses Server-Side Caching:
+     * Results are cached for 5 minutes per user to prevent DB spikes
+     * from high-frequency frontend polling or multi-tab usage.
+     */
+    @GetMapping("/notifications/summary")
+    @Cacheable(value = "notification_summary", key = "#root.target.getCurrentUser().email")
+    public java.util.Map<String, Object> getNotificationSummary() {
+        User user = getCurrentUser();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate nextWeek = today.plusDays(7);
+
+        long expiringCount = apiKeyRepository.countExpiringKeysForUser(user, today, nextWeek);
+
+        return java.util.Map.of(
+                "expiringCount", expiringCount,
+                "periodDays", 7,
+                "timestamp", java.time.Instant.now().toString());
     }
 
     @PostMapping("/projects")
-    public ResponseEntity<ProjectDTO> createProject(@RequestBody ProjectDTO dto) {
+    public ResponseEntity<?> createProject(@Valid @RequestBody ProjectDTO dto) {
         User user = getCurrentUser();
+
+        // Resource Protection: Limit creation rate to prevent spam/DoS
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "project_mutation_" + clientIp + "_" + user.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
+
         Project project = Project.builder()
                 .name(dto.getName())
                 .tag(dto.getTag())
@@ -118,14 +166,23 @@ public class ProjectController {
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<ProjectDTO> updateProject(@PathVariable("id") UUID id, @RequestBody ProjectDTO dto) {
-        Project project = projectRepository.findById(id).orElseThrow();
+    public ResponseEntity<?> updateProject(@PathVariable("id") UUID id, @Valid @RequestBody ProjectDTO dto) {
+        Project project = projectRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new RuntimeException("Context not found in secure registry."));
         User currentUser = getCurrentUser();
+
+        // Resource Protection
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "project_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
 
         try {
             teamService.verifyRole(project, currentUser, "OWNER");
         } catch (RuntimeException e) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403).body(java.util.Map.of("message", e.getMessage()));
         }
 
         project.setName(dto.getName());
@@ -139,37 +196,62 @@ public class ProjectController {
     }
 
     @DeleteMapping("/projects/{id}")
+    @Transactional
     public ResponseEntity<?> deleteProject(@PathVariable("id") UUID id) {
-        Project project = projectRepository.findById(id).orElseThrow();
+        Project project = projectRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
         User currentUser = getCurrentUser();
 
-        // Primary check: direct ID-based ownership comparison to avoid lazy-proxy
-        // issues that can cause verifyRole to misfire during a delete transaction.
+        // Resource Protection
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "project_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
+
+        logger.info("User {} attempting to delete project {} (ID: {})",
+                currentUser.getEmail(), project.getName(), id);
+
+        // 1. Ownership check (Robust ID + Email fallback)
         boolean isDirectOwner = project.getUser() != null
                 && project.getUser().getId().equals(currentUser.getId());
 
         if (!isDirectOwner) {
-            // Fallback: check via membership table (handles team OWNER role grants)
-            try {
-                teamService.verifyRole(project, currentUser, "OWNER");
-            } catch (RuntimeException e) {
-                logger.warn(
-                        "Access Denied for user {} attempting to delete project {} (ID: {}). Owner is {}. Error: {}",
-                        currentUser.getEmail(), project.getName(), project.getId(),
-                        (project.getUser() != null ? project.getUser().getEmail() : "NULL"), e.getMessage());
-                return ResponseEntity.status(403)
-                        .body(java.util.Map.of("message",
-                                "Access Denied: Only the project owner can delete this workspace."));
+            String uEmail = currentUser.getEmail().toLowerCase().trim();
+            String oEmail = project.getUser() != null ? project.getUser().getEmail().toLowerCase().trim() : "";
+            if (!uEmail.equals(oEmail) || uEmail.isEmpty()) {
+                try {
+                    teamService.verifyRole(project, currentUser, "OWNER");
+                } catch (RuntimeException e) {
+                    logger.warn("Access Denied: User {} is not owner of project {}",
+                            currentUser.getEmail(), project.getName());
+                    return ResponseEntity.status(403)
+                            .body(java.util.Map.of("message",
+                                    "Access Denied: Only the project owner can delete this workspace."));
+                }
             }
         }
 
-        // Delete audit logs first to avoid FK constraint violation
-        // (audit_logs.project_id)
-        // since Project has no cascade relationship to AuditLog.
-        auditLogRepository.deleteByProject(project);
+        try {
+            // 2. Delete Non-Cascading Dependencies
+            // Audit logs contain binary association with Project
+            auditLogRepository.deleteByProject(project);
 
-        projectRepository.delete(project);
-        return ResponseEntity.ok().build();
+            // Machine Tokens are not currently in the Project entity's cascade list
+            tokenRepository.deleteByProject(project);
+
+            // 3. Delete Project record (triggers cascade ALL for members/keys)
+            projectRepository.delete(project);
+
+            logger.info("Successfully purged project: {} (ID: {})", project.getName(), id);
+            return ResponseEntity
+                    .ok(java.util.Map.of("message", "Project and all associated data purged successfully."));
+        } catch (Exception e) {
+            logger.error("Internal failure during project deletion for {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(java.util.Map.of("message", "Database Constraint Violation: " + e.getMessage()));
+        }
     }
 
     // --- Key Management Methods ---
@@ -203,9 +285,18 @@ public class ProjectController {
     }
 
     @PostMapping("/keys")
-    public ResponseEntity<ApiKeyDTO> createKey(@RequestBody ApiKeyDTO dto) {
-        Project project = projectRepository.findById(dto.getProjectId()).orElseThrow();
+    public ResponseEntity<?> createKey(@Valid @RequestBody ApiKeyDTO dto) {
+        Project project = projectRepository.findByIdWithUser(dto.getProjectId())
+                .orElseThrow(() -> new RuntimeException("Target context not found."));
         User currentUser = getCurrentUser();
+
+        // Critical Protection: Secret creation involves heavy client/server crypto sync
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "key_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
 
         try {
             teamService.verifyRole(project, currentUser, "EDITOR");
@@ -225,20 +316,44 @@ public class ProjectController {
                 .build();
 
         ApiKey saved = apiKeyRepository.save(key);
+
+        // Version 1
+        apiKeyVersionRepository.saveAndFlush(ApiKeyVersion.builder()
+                .apiKey(saved)
+                .version(saved.getCurrentVersion())
+                .name(saved.getName())
+                .service(saved.getService())
+                .environment(saved.getEnvironment())
+                .encryptedValue(saved.getEncryptedValue())
+                .iv(saved.getIv())
+                .expiryDate(saved.getExpiryDate())
+                .notes(saved.getNotes())
+                .updatedBy(currentUser.getEmail())
+                .build());
+
         auditService.logAction(project, currentUser, "CREATE_KEY", "API_KEY", saved.getId().toString(),
                 "Created key: " + saved.getName());
         return ResponseEntity.ok(convertToApiKeyDTO(saved));
     }
 
     @PutMapping("/keys/{id}")
-    public ResponseEntity<ApiKeyDTO> updateKey(@PathVariable("id") UUID id, @RequestBody ApiKeyDTO dto) {
-        ApiKey key = apiKeyRepository.findById(id).orElseThrow();
+    public ResponseEntity<?> updateKey(@PathVariable("id") UUID id, @Valid @RequestBody ApiKeyDTO dto) {
+        ApiKey key = apiKeyRepository.findByIdWithProjectAndUser(id)
+                .orElseThrow(() -> new RuntimeException("Secret identifier not found."));
         User currentUser = getCurrentUser();
+
+        // Critical Protection
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "key_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
 
         try {
             teamService.verifyRole(key.getProject(), currentUser, "EDITOR");
         } catch (RuntimeException e) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403).body(java.util.Map.of("message", e.getMessage()));
         }
 
         key.setName(dto.getName());
@@ -248,17 +363,140 @@ public class ProjectController {
         key.setIv(dto.getIv());
         key.setExpiryDate(dto.getExpiryDate());
         key.setNotes(dto.getNotes());
+        key.setCurrentVersion(key.getCurrentVersion() + 1);
 
-        apiKeyRepository.save(key);
+        apiKeyRepository.saveAndFlush(key);
+
+        ApiKeyVersion versionRecord = ApiKeyVersion.builder()
+                .apiKey(key)
+                .version(key.getCurrentVersion())
+                .name(key.getName())
+                .service(key.getService())
+                .environment(key.getEnvironment())
+                .encryptedValue(key.getEncryptedValue())
+                .iv(key.getIv())
+                .expiryDate(key.getExpiryDate())
+                .notes(key.getNotes())
+                .updatedBy(currentUser.getEmail())
+                .build();
+
+        apiKeyVersionRepository.saveAndFlush(versionRecord);
+
+        System.out.println(
+                "[Vault] Updated key " + key.getId() + " to v" + key.getCurrentVersion() + ". Snapshot saved.");
+
         auditService.logAction(key.getProject(), currentUser, "UPDATE_KEY", "API_KEY", key.getId().toString(),
-                "Updated key: " + key.getName());
+                "Updated key: " + key.getName() + " (v" + key.getCurrentVersion() + ")");
         return ResponseEntity.ok(convertToApiKeyDTO(key));
+    }
+
+    @GetMapping("/keys/{id}/history")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getKeyHistory(@PathVariable("id") UUID id) {
+        ApiKey key = apiKeyRepository.findById(id).orElseThrow();
+        User currentUser = getCurrentUser();
+
+        try {
+            teamService.verifyRole(key.getProject(), currentUser, "VIEWER");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).build();
+        }
+
+        List<java.util.Map<String, Object>> history = apiKeyVersionRepository.findByApiKeyOrderByVersionDesc(key)
+                .stream().map(v -> {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("version", v.getVersion());
+                    map.put("createdAt", v.getCreatedAt());
+                    map.put("updatedBy", v.getUpdatedBy());
+                    map.put("notes", v.getNotes());
+                    map.put("name", v.getName());
+                    map.put("service", v.getService());
+                    return map;
+                }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(history);
+    }
+
+    @Transactional
+    @PostMapping("/keys/{id}/rollback/{versionId}")
+    public ResponseEntity<?> rollbackKey(@PathVariable("id") UUID id,
+            @PathVariable("versionId") Integer version) {
+        ApiKey key = apiKeyRepository.findByIdWithProjectAndUser(id)
+                .orElseThrow(() -> new RuntimeException("Secret timeline entry not found."));
+        User currentUser = getCurrentUser();
+
+        // Critical Protection: Rollbacks involve heavy snapshot transitions
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "key_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many requests. Please wait a minute."));
+        }
+
+        try {
+            teamService.verifyRole(key.getProject(), currentUser, "EDITOR");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(java.util.Map.of("message", e.getMessage()));
+        }
+
+        List<ApiKeyVersion> history = apiKeyVersionRepository.findByApiKeyOrderByVersionDesc(key);
+        logger.info("[Vault] Rollback initiated for Key: {} (ID: {}). History depth: {}", key.getName(), id,
+                history.size());
+
+        ApiKeyVersion target = history.stream()
+                .filter(v -> Integer.valueOf(v.getVersion()).equals(version))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException(
+                        "Version " + version + " not found in history snapshot of " + history.size() + " records."));
+
+        logger.info("[Vault] Rollback target v{} selected.", target.getVersion());
+
+        key.setName(target.getName());
+        key.setService(target.getService());
+        key.setEnvironment(target.getEnvironment());
+        key.setEncryptedValue(target.getEncryptedValue());
+        key.setIv(target.getIv());
+        key.setExpiryDate(target.getExpiryDate());
+        key.setNotes(target.getNotes());
+
+        int nextVersion = key.getCurrentVersion() + 1;
+        key.setCurrentVersion(nextVersion);
+
+        ApiKey restored = apiKeyRepository.saveAndFlush(key);
+
+        apiKeyVersionRepository.saveAndFlush(ApiKeyVersion.builder()
+                .apiKey(restored)
+                .version(nextVersion)
+                .name(restored.getName())
+                .service(restored.getService())
+                .environment(restored.getEnvironment())
+                .encryptedValue(restored.getEncryptedValue())
+                .iv(restored.getIv())
+                .expiryDate(restored.getExpiryDate())
+                .notes(restored.getNotes())
+                .updatedBy(currentUser.getEmail() + " (Rollback to v" + version + ")")
+                .build());
+
+        logger.info("[Vault] Rollback successful. New version created: v{}", nextVersion);
+
+        auditService.logAction(restored.getProject(), currentUser, "ROLLBACK_KEY", "API_KEY",
+                restored.getId().toString(),
+                "Rolled back key: " + restored.getName() + " to v" + version);
+
+        return ResponseEntity.ok(convertToApiKeyDTO(restored));
     }
 
     @DeleteMapping("/keys/{id}")
     public ResponseEntity<?> deleteKey(@PathVariable("id") UUID id) {
-        ApiKey key = apiKeyRepository.findById(id).orElseThrow();
+        ApiKey key = apiKeyRepository.findByIdWithProjectAndUser(id)
+                .orElseThrow(() -> new RuntimeException("Secret not found."));
         User currentUser = getCurrentUser();
+
+        // Resource Protection
+        String clientIp = request.getRemoteAddr();
+        String rateLimitKey = "key_mutation_" + clientIp + "_" + currentUser.getEmail();
+        if (!rateLimitService.resolveBucket(rateLimitKey, 10, 10, Duration.ofMinutes(1)).tryConsume(1)) {
+            return ResponseEntity.status(429).body(java.util.Map.of("message", "Too many requests."));
+        }
 
         try {
             teamService.verifyRole(key.getProject(), currentUser, "EDITOR");
@@ -273,7 +511,8 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/{projectId}/audit-logs")
-    public ResponseEntity<?> getAuditLogs(@PathVariable("projectId") UUID projectId) {
+    public ResponseEntity<?> getAuditLogs(@PathVariable("projectId") UUID projectId,
+            @RequestParam(value = "days", defaultValue = "30") Integer days) {
         Project project = projectRepository.findById(projectId).orElseThrow();
         User currentUser = getCurrentUser();
 
@@ -292,8 +531,12 @@ public class ProjectController {
             }
         }
 
+        // Professional Guard: Prevent DB burst by limiting the time window.
+        // Default is 30 days, but configurable via UI.
+        LocalDateTime threshold = LocalDateTime.now().minusDays(days);
+
         List<com.apimanager.keyvault.model.AuditLog> logs = auditLogRepository
-                .findByProjectOrderByCreatedAtDesc(project);
+                .findByProjectAndCreatedAtAfterOrderByCreatedAtDesc(project, threshold);
 
         List<com.apimanager.keyvault.dto.AuditLogDTO> dtos = logs.stream().map(l -> {
             com.apimanager.keyvault.dto.AuditLogDTO d = new com.apimanager.keyvault.dto.AuditLogDTO();
@@ -322,6 +565,7 @@ public class ProjectController {
         dto.setIv(key.getIv());
         dto.setExpiryDate(key.getExpiryDate());
         dto.setNotes(key.getNotes());
+        dto.setVersion(key.getCurrentVersion());
         return dto;
     }
 
@@ -358,7 +602,7 @@ public class ProjectController {
                     .project(project)
                     .name(request.getName())
                     .tokenId(request.getTokenId())
-                    .tokenHash(request.getTokenHash())
+                    .tokenHash(passwordEncoder.encode(request.getTokenHash()))
                     .encryptedProjectKey(request.getEncryptedProjectKey())
                     .build();
 
@@ -389,19 +633,55 @@ public class ProjectController {
     }
 
     @PostMapping("/tokens/verify")
-    public ResponseEntity<?> verifyMachineToken(@RequestBody java.util.Map<String, String> request) {
-        String tokenId = request.get("tokenId");
-        String tokenHash = request.get("tokenHash");
+    public ResponseEntity<?> verifyMachineToken(@RequestBody java.util.Map<String, String> verifyRequest) {
+        String clientIp = request.getRemoteAddr();
+        String tokenId = verifyRequest.get("tokenId");
+        String rateLimitKey = "verify_" + clientIp + "_" + tokenId;
+
+        if (!rateLimitService.resolveKeyBucket(rateLimitKey).tryConsume(1)) {
+            return ResponseEntity.status(429)
+                    .body(java.util.Map.of("message", "Too many verification attempts. Please wait a minute."));
+        }
+
+        String incomingHash = verifyRequest.get("tokenHash");
 
         MachineToken token = tokenRepository.findByTokenId(tokenId)
                 .orElseThrow(() -> new RuntimeException("Invalid Machine Token ID"));
 
-        if (!token.getTokenHash().equals(tokenHash)) {
+        boolean matches = false;
+        String storedHash = token.getTokenHash();
+
+        if (storedHash != null && storedHash.startsWith("$2a$")) {
+            matches = passwordEncoder.matches(incomingHash, storedHash);
+        } else {
+            // Legacy Migration Shield: Deep check for existing SHA-256 tokens
+            matches = storedHash != null && storedHash.equals(incomingHash);
+            if (matches) {
+                // Transparently upgrade the token to secure BCrypt format on the fly
+                token.setTokenHash(passwordEncoder.encode(incomingHash));
+                tokenRepository.save(token);
+                logger.info("Successfully migrated machine identity {} to modern security standards.", tokenId);
+            }
+        }
+
+        if (!matches) {
             return ResponseEntity.status(401).body(java.util.Map.of("message", "Invalid Token Secret"));
         }
 
+        String requestedEnv = verifyRequest.get("environment");
+        List<ApiKeyDTO> keys = apiKeyRepository.findByProject(token.getProject()).stream()
+                .filter(k -> requestedEnv == null || requestedEnv.equalsIgnoreCase(k.getEnvironment()))
+                .map(this::convertToApiKeyDTO)
+                .collect(Collectors.toList());
+
+        logger.info("[Security] Machine Token verified for project: {} (Env: {})",
+                token.getProject().getName(), requestedEnv != null ? requestedEnv : "ALL");
+
         return ResponseEntity.ok(java.util.Map.of(
                 "projectId", token.getProject().getId(),
-                "encryptedProjectKey", token.getEncryptedProjectKey()));
+                "projectName", token.getProject().getName(),
+                "projectTag", token.getProject().getTag() != null ? token.getProject().getTag() : "no-tag",
+                "encryptedProjectKey", token.getEncryptedProjectKey(),
+                "keys", keys));
     }
 }

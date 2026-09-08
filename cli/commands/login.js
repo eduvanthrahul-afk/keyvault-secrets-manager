@@ -3,8 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const api = require('../utils/api');
+const cryptoUtils = require('../utils/crypto');
 const chalk = require('chalk');
 const figlet = require('figlet');
+const { writeEncrypted } = require('../utils/cryptoConfig');
 
 function prompt(query) {
     const rl = readline.createInterface({
@@ -29,8 +31,15 @@ module.exports = async function () {
     const password = await prompt(chalk.blue("🔑  Password: "));
 
     try {
+        console.log("Fetching secure salt...");
+        const saltRes = await api.auth.getSalt(email);
+        const salt = saltRes.salt;
+
+        console.log("Generating Zero-Knowledge Auth Hash...");
+        const authHash = await cryptoUtils.generateAuthHash(password, salt);
+
         console.log("Authenticating with KeyVault...");
-        const response = await api.auth.login(email, password);
+        const response = await api.auth.login(email, authHash);
 
         const configDir = path.join(os.homedir(), '.kv-cli');
         if (!fs.existsSync(configDir)) {

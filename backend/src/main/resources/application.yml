@@ -1,8 +1,10 @@
 spring:
+  config:
+    import: optional:file:./secrets.properties
   datasource:
     url: jdbc:mysql://localhost:3306/keyvault_db?createDatabaseIfNotExist=true
-    username: DEV
-    password: Qwaszx@12304
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -11,6 +13,11 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+
+  cache:
+    cache-names: notification_summary
+    caffeine:
+      spec: expireAfterWrite=300s,maximumSize=10000
 
   mail:
     host: smtp.gmail.com
@@ -25,5 +32,11 @@ spring:
             enable: true
 
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: 86400000 # 24 hours
+  secret: ${JWT_SECRET}
+  expiration: 900000 # 15 minutes
+
+resend:
+  api:
+    key: ${RESEND_API_KEY} # Literal API Key removed
+  from:
+    email: onboarding@resend.dev # Sender Email

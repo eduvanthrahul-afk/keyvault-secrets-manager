@@ -18,7 +18,7 @@ function hexToBuffer(hex) {
     return bytes.buffer;
 }
 
-async function deriveKey(password, saltHex) {
+async function generateAuthHash(password, saltHex) {
     const encoder = new TextEncoder();
     const baseKey = await crypto.subtle.importKey(
         'raw',
@@ -30,6 +30,37 @@ async function deriveKey(password, saltHex) {
 
     const salt = hexToBuffer(saltHex);
 
+    // Stage 1: Create Auth_Hash (100k iterations)
+    const authHashKey = await crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: PBKDF2_ITERATIONS,
+            hash: 'SHA-256'
+        },
+        baseKey,
+        { name: 'HMAC', hash: 'SHA-256', length: 256 },
+        true,
+        ['sign']
+    );
+
+    const exportedAuth = await crypto.subtle.exportKey("raw", authHashKey);
+    return bufferToHex(exportedAuth);
+}
+
+async function deriveKey(authHash, saltHex) {
+    const encoder = new TextEncoder();
+    const baseKey = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(authHash),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    const salt = hexToBuffer(saltHex);
+
+    // Stage 2: Create Master_Encryption_Key from Auth_Hash (another 100k iterations)
     return await crypto.subtle.deriveKey(
         {
             name: 'PBKDF2',
@@ -69,8 +100,10 @@ async function unwrapProjectKey(wrappedHex, rsaPrivateKey) {
         "raw",
         wrappedBuffer,
         rsaPrivateKey,
-        "RSA-OAEP",
+        { name: "RSA-OAEP" },
         { name: ALGO, length: KEY_LENGTH },
+        false,
+        ['encrypt', 'decrypt']
     );
 }
 
@@ -117,38 +150,11 @@ async function decrypt(ciphertextHex, ivHex, key) {
     return decoder.decode(decryptedBuffer);
 }
 
-// Fallback logic
-async function getLegacyProjectKey(projectId) {
-    const encoder = new TextEncoder();
-    const baseKey = await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(projectId),
-        'PBKDF2',
-        false,
-        ['deriveKey']
-    );
-
-    const salt = hexToBuffer("abcdef1234567890abcdef1234567890");
-
-    return await crypto.subtle.deriveKey(
-        {
-            name: 'PBKDF2',
-            salt: salt,
-            iterations: 50000,
-            hash: 'SHA-256'
-        },
-        baseKey,
-        { name: ALGO, length: KEY_LENGTH },
-        false,
-        ['encrypt', 'decrypt']
-    );
-}
-
 module.exports = {
+    generateAuthHash,
     deriveKey,
     decryptAndImportPrivateKey,
     unwrapProjectKey,
     unwrapProjectKeyWithToken,
-    decrypt,
-    getLegacyProjectKey
+    decrypt
 };

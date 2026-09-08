@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const projectTitleDisplay = document.getElementById('project-title-display');
 
     // Auth check
-    if (!localStorage.getItem('jwt_token')) {
+    if (!localStorage.getItem('user_email')) {
         window.location.href = 'login.html';
         return;
     }
@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadProjects = async () => {
         try {
             const projects = await ApiClient.projects.getAll();
+            if (!projects) return;
+
             const menu = document.getElementById('dropdown-menu');
             const toggle = document.getElementById('dropdown-toggle');
             const selectedText = document.getElementById('dropdown-selected-text');
@@ -33,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             projects.forEach(p => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
-                item.innerHTML = `<i class="fa-solid fa-folder-closed"></i> <span>${p.name}</span>`;
+                item.innerHTML = `<i class="fa-solid fa-folder-closed"></i> <span>${esc(p.name)}</span>`;
                 item.onclick = () => {
                     selectProject(p.id, p.name, p.name, hiddenInput, selectedText, menu, toggle);
                 };
@@ -71,28 +73,73 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadLogs(id);
     };
 
-    const loadLogs = async (projectId) => {
+    let currentDays = 30;
+
+    const loadLogs = async (projectId, days = currentDays) => {
         if (!projectId) {
             logsSection.style.display = 'none';
-            emptyState.style.display = 'block';
+            emptyState.style.display = 'flex';
             document.getElementById('empty-state-title').textContent = "Awaiting Forensic Context";
             document.getElementById('empty-state-desc').textContent = "Select a workspace context from the registry above to monitor the security event timeline.";
             return;
         }
 
+        currentDays = days;
+
         try {
-            const logs = await ApiClient.projects.getAuditLogs(projectId) || [];
-            renderLogs(logs);
             logsSection.style.display = 'block';
             emptyState.style.display = 'none';
+
+            // Forensic Loading State (Skeletons)
+            logsTableBody.innerHTML = Array(5).fill(0).map(() => `
+                <tr style="border-bottom: 1px solid var(--border-soft);">
+                    <td style="padding: 1rem;"><div class="skeleton-text skeleton" style="width: 80px;"></div></td>
+                    <td style="padding: 1rem;"><div class="skeleton-text skeleton" style="width: 140px;"></div></td>
+                    <td style="padding: 1rem;"><div class="skeleton skeleton-pill"></div></td>
+                    <td style="padding: 1rem;"><div class="skeleton-text skeleton" style="width: 100px;"></div></td>
+                    <td style="padding: 1rem;"><div class="skeleton-text skeleton" style="width: 200px;"></div></td>
+                </tr>
+            `).join('');
+
+            const logs = await ApiClient.projects.getAuditLogs(projectId, days);
+            renderLogs(logs);
+            updateFilterUI(days);
         } catch (err) {
             console.error('Failed to load logs:', err);
             logsSection.style.display = 'none';
-            emptyState.style.display = 'block';
+            emptyState.style.display = 'flex';
             document.getElementById('empty-state-title').textContent = "Access Denied";
             document.getElementById('empty-state-desc').textContent = "You do not have the required permissions to view audit logs for this project.";
         }
     };
+
+    const updateFilterUI = (days) => {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (parseInt(btn.getAttribute('data-days')) === days) {
+                btn.classList.add('active');
+                btn.style.background = 'var(--surface-2)';
+                btn.style.fontWeight = '600';
+                btn.style.color = 'var(--text-primary)';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.fontWeight = '400';
+                btn.style.color = 'var(--text-secondary)';
+            }
+        });
+    };
+
+    // Attach Filter Listeners
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const days = parseInt(btn.getAttribute('data-days'));
+            const projectId = projectSelector.value;
+            if (projectId) loadLogs(projectId, days);
+            else currentDays = days;
+            updateFilterUI(days);
+        };
+    });
 
     const getActionBadge = (action) => {
         const a = action.toUpperCase();
@@ -126,10 +173,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tr.innerHTML = `
                 <td style="padding: 1rem; color: var(--text-secondary); white-space: nowrap;">${date}</td>
-                <td style="padding: 1rem; color: var(--text-primary); font-weight: 600;">${log.userEmail}</td>
-                <td style="padding: 1rem;"><span class="badge ${getActionBadge(log.action)}">${log.action}</span></td>
-                <td style="padding: 1rem;"><span class="mono-token" style="font-size: 11px; opacity: 0.8;">${log.ipAddress}</span></td>
-                <td style="padding: 1rem; color: var(--text-secondary);">${log.details}</td>
+                <td style="padding: 1rem; color: var(--text-primary); font-weight: 600;">${esc(log.userEmail)}</td>
+                <td style="padding: 1rem;"><span class="badge ${getActionBadge(log.action)}">${esc(log.action)}</span></td>
+                <td style="padding: 1rem;"><span class="mono-token" style="font-size: 11px; opacity: 0.8;">${esc(log.ipAddress)}</span></td>
+                <td style="padding: 1rem; color: var(--text-secondary);">${esc(log.details)}</td>
             `;
             logsTableBody.appendChild(tr);
         });
@@ -137,6 +184,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const refreshLogsBtn = document.getElementById('refresh-logs-btn');
     if (refreshLogsBtn) refreshLogsBtn.onclick = () => loadLogs(projectSelector.value);
+
+    const exportLogsBtn = document.getElementById('export-logs-btn');
+    if (exportLogsBtn) {
+        exportLogsBtn.onclick = async () => {
+            const projectId = projectSelector.value;
+            if (!projectId) {
+                notifications.showToast('Select Context', 'Please select a workspace context before attempting to export logs.', 'warning');
+                return;
+            }
+
+            try {
+                const logs = await ApiClient.projects.getAuditLogs(projectId, currentDays) || [];
+                if (logs.length === 0) {
+                    notifications.showToast('Empty Data', 'No security events found to export for this context.', 'info');
+                    return;
+                }
+
+                const projectName = projectTitleDisplay.textContent.trim();
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `audit_log_${projectName.toLowerCase().replace(/\s+/g, '_')}_${timestamp}.json`;
+
+                const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                notifications.showToast('Export Successful', `Forensic timeline for "${esc(projectName)}" has been archived.`, 'success');
+            } catch (err) {
+                notifications.showToast('Export Error', esc(err.message), 'error');
+            }
+        };
+    }
 
     await loadProjects();
 });

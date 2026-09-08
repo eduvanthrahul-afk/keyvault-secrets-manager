@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register | KeyVault Pro</title>
+    <title>Register | Kypher Pro</title>
+    <!-- Theme Orchestrator -->
+    <script src="js/theme-manager.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,10 +15,10 @@
     <div class="auth-wrapper fade-in">
         <div class="auth-side-info">
             <div class="app-logo">
-                <i class="fa-solid fa-vault" style="color: white; font-size: 24px;"></i>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" style="display:block;margin:auto;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
             </div>
             <h1 class="auth-info-title">The Foundation of Your Security</h1>
-            <p class="auth-info-desc">Join thousands of engineering teams world-wide who trust KeyVault Pro to secure
+            <p class="auth-info-desc">Join thousands of engineering teams world-wide who trust Kypher Pro to secure
                 their most sensitive cryptographic secrets and API credentials.</p>
 
             <ul class="feature-hints">
@@ -82,6 +84,35 @@
                             Workspace</a></p>
                 </footer>
             </main>
+        </div>
+    </div>
+
+    <!-- OTP Verification Modal -->
+    <div id="otp-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center;">
+        <div class="modal-content fade-in" style="max-width: 400px; padding: 2.5rem; text-align: center;">
+            <div class="confirm-icon-wrap"
+                style="background: rgba(59, 130, 246, 0.1); color: var(--accent-1); border-color: rgba(59, 130, 246, 0.2); margin-bottom: 1.5rem;">
+                <i class="fa-solid fa-envelope-circle-check"></i>
+            </div>
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.04em;">
+                Verification Required</h2>
+            <p class="text-muted" style="margin-bottom: 2rem; font-size: 0.95rem;">We've dispatched a 6-digit security
+                code to your email. Please enter it below to authorize enrollment.</p>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <input type="text" id="otp-input" class="input" placeholder="0 0 0 0 0 0" maxlength="6"
+                    style="text-align: center; font-size: 1.75rem; letter-spacing: 0.5rem; font-weight: 800; border-color: var(--accent-1);">
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button id="cancel-otp" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                <button id="verify-otp-btn" class="btn btn-primary" style="flex: 2;">Verify & Register</button>
+            </div>
+
+            <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                Didn't receive it? <a href="#" id="resend-otp-link"
+                    style="color: var(--accent-1); font-weight: 600; text-decoration: none;">Resend Code</a>
+            </p>
         </div>
     </div>
 

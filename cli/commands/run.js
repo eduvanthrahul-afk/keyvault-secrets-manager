@@ -27,35 +27,28 @@ module.exports = async function (cmdArray, options) {
     try {
         let projectKeyObj;
         let authToken = null;
+        let keysResponse = null;
 
         if (token) {
             // CI/CD / Machine Token Flow
             console.log(chalk.cyan("🤖 Machine Identity detected. Authenticating via token..."));
             const parts = token.split('.');
-            if (parts.length !== 2) throw new Error("Invalid token format. Expected kv_id.secret");
+            if (parts.length !== 2) throw new Error("Invalid token format. Expected id.secret");
 
             const tokenId = parts[0];
             const tokenSecret = parts[1];
 
             const tokenHash = crypto.createHash('sha256').update(tokenSecret).digest('hex');
 
-            const verifyRes = await api.tokens.verify(tokenId, tokenHash);
+            const verifyRes = await api.tokens.verify(tokenId, tokenHash, options.env);
             projectId = verifyRes.projectId;
+            const projectName = verifyRes.projectName;
+            const projectTag = verifyRes.projectTag;
+
+            console.log(chalk.cyan(`🔓 Unlocking vault for architecture: ${chalk.bold(projectName)} ${chalk.gray(`(${projectTag})`)}`));
 
             projectKeyObj = await cryptoUtils.unwrapProjectKeyWithToken(verifyRes.encryptedProjectKey, tokenSecret);
-
-            // We still need a temporary token to fetch the keys. 
-            // In a real system, the Machine Token would grant a session.
-            // For this MVP, we'll assume the CLI user is logged in, OR we'd need to add machine-auth to the backend.
-            // Let's check if we have a local config.
-            const configPath = path.join(os.homedir(), '.kv-cli', 'config.json');
-            if (fs.existsSync(configPath)) {
-                authToken = JSON.parse(fs.readFileSync(configPath, 'utf-8')).token;
-            } else {
-                // If no local config, we need to allow the backend to fetch keys with a Machine Token.
-                // For now, let's assume the user has logged in once.
-                throw new Error("Machine token requires a local session for key retrieval in this version.");
-            }
+            keysResponse = verifyRes.keys;
 
         } else {
             // Interactive User Flow
@@ -89,7 +82,8 @@ module.exports = async function (cmdArray, options) {
             const masterPassword = await prompt(chalk.blue("🔑 Enter Master Password (RAM-only decryption): "));
 
             // 2. Derive Session Key and Unlock RSA Private Key
-            const sessionKey = await cryptoUtils.deriveKey(masterPassword, config.salt);
+            const authHash = await cryptoUtils.generateAuthHash(masterPassword, config.salt);
+            const sessionKey = await cryptoUtils.deriveKey(authHash, config.salt);
             let rsaPrivateKey = null;
             if (config.encryptedPrivateKey) {
                 rsaPrivateKey = await cryptoUtils.decryptAndImportPrivateKey(config.encryptedPrivateKey, sessionKey);
@@ -102,13 +96,13 @@ module.exports = async function (cmdArray, options) {
             if (me && me.encryptedProjectKey && rsaPrivateKey) {
                 projectKeyObj = await cryptoUtils.unwrapProjectKey(me.encryptedProjectKey, rsaPrivateKey);
             } else {
-                console.log(chalk.yellow("ℹ️  Missing specific RSA encrypted key, falling back to legacy algorithm..."));
-                projectKeyObj = await cryptoUtils.getLegacyProjectKey(projectId);
+                throw new Error("This project has no encrypted master key for your identity. Please ensure you are a member with a properly wrapped key.");
             }
+
+            // 4. Fetch the secrets from the vault
+            keysResponse = await api.keys.getByProject(authToken, projectId);
         }
 
-        // 4. Fetch the secrets from the vault
-        const keysResponse = await api.keys.getByProject(authToken, projectId);
         const envKeys = keysResponse.filter(k => k.environment.toUpperCase() === options.env.toUpperCase());
 
         // 5. Decrypt!

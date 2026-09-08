@@ -30,11 +30,11 @@ public class TeamController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Map<String, String>>> getMembers(@PathVariable("projectId") UUID projectId) {
+    public ResponseEntity<?> getMembers(@PathVariable("projectId") UUID projectId) {
         try {
             return ResponseEntity.ok(teamService.getProjectMembers(projectId, getCurrentUser()));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(403).build();
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
         }
     }
 

@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teams | KeyVault Pro</title>
-    <!-- Automatic Theme Detection is handled by CSS -->
+    <title>Teams | Kypher Pro</title>
+    <!-- Multi-Theme Orchestrator -->
+    <script src="js/theme-manager.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -16,9 +17,17 @@
             <div class="sidebar-logo">
                 <a href="dashboard.html" class="logo-container">
                     <div class="app-logo">
-                        <i class="fa-solid fa-vault" style="color: white; font-size: 14px;"></i>
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" fill="none"
+                            style="display:block;margin:auto;">
+                            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon>
+                            <line x1="12" y1="22" x2="12" y2="15.5"></line>
+                            <polyline points="22 8.5 12 15.5 2 8.5"></polyline>
+                            <polyline points="2 15.5 12 8.5 22 15.5"></polyline>
+                            <line x1="12" y1="2" x2="12" y2="8.5"></line>
+                        </svg>
                     </div>
-                    <span class="logo-text">KeyVault</span>
+                    <span class="logo-text">Kypher</span>
                 </a>
             </div>
 
@@ -35,7 +44,7 @@
                 </a>
 
                 <div class="nav-label">System</div>
-                <a href="#" class="nav-link" style="opacity: 0.4; cursor: not-allowed;">
+                <a href="settings.html" class="nav-link">
                     <i class="fa-solid fa-gears"></i> Settings
                 </a>
             </nav>
@@ -70,7 +79,12 @@
                 </div>
                 <div style="display: flex; gap: 16px; align-items: center;">
                     <div style="width: 1px; height: 24px; background: var(--border);"></div>
-                    <button class="btn btn-ghost" style="padding: 8px;"><i class="fa-regular fa-bell"></i></button>
+                    <div class="nav-notification-wrap">
+                        <button class="btn btn-ghost" style="padding: 8px; border-radius: 10px;">
+                            <i class="fa-regular fa-bell" style="font-size: 16px;"></i>
+                        </button>
+                        <div class="notification-dot"></div>
+                    </div>
                 </div>
             </header>
 
@@ -205,6 +219,7 @@
 
     <script src="js/api.js"></script>
     <script src="js/crypto.js"></script>
+    <script src="js/nav-manager.js"></script>
     <script src="js/teams.js"></script>
 </body>
 

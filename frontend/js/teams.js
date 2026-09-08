@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentUserEmail = (localStorage.getItem('user_email') || '').toLowerCase();
 
     // Auth check
-    if (!localStorage.getItem('jwt_token')) {
+    if (!localStorage.getItem('user_email')) {
         window.location.href = 'login.html';
         return;
     }
@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadProjects = async () => {
         try {
             const projects = await ApiClient.projects.getAll();
+            if (!projects) return;
+
             const menu = document.getElementById('dropdown-menu');
             const toggle = document.getElementById('dropdown-toggle');
             const selectedText = document.getElementById('dropdown-selected-text');
@@ -40,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             projects.forEach(p => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
-                item.innerHTML = `<i class="fa-solid fa-folder-closed"></i> <span>${p.name}</span>`;
+                item.innerHTML = `<i class="fa-solid fa-folder-closed"></i> <span>${esc(p.name)}</span>`;
                 item.onclick = () => {
                     selectProject(p.id, p.name, hiddenInput, selectedText, menu, toggle);
                 };
@@ -150,25 +152,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let roleControl = '';
             if (canEditRole) {
-                const isAdminOptionDisabled = myRole !== 'OWNER' ? 'disabled' : '';
+                const isAdminOptionDisabled = (myRole !== 'OWNER') ? 'disabled' : '';
                 roleControl = `
-                    <select class="select role-select" data-email="${m.email}" style="padding: 4px 8px; font-size: 12px; width: auto; height: 32px; border-radius: 8px;">
+                    <select class="select role-select" data-email="${esc(m.email)}" style="padding: 4px 8px; font-size: 12px; width: auto; height: 32px; border-radius: 8px;">
                         <option value="VIEWER" ${targetRole === 'VIEWER' ? 'selected' : ''}>Viewer</option>
                         <option value="EDITOR" ${targetRole === 'EDITOR' ? 'selected' : ''}>Editor</option>
                         <option value="ADMIN" ${targetRole === 'ADMIN' ? 'selected' : ''} ${isAdminOptionDisabled}>Admin</option>
                     </select>
                 `;
             } else {
-                roleControl = `<span class="role-badge-pill ${targetRole.toLowerCase()}">${targetRole}</span>`;
+                roleControl = `<span class="role-badge-pill ${targetRole.toLowerCase()}">${esc(targetRole)}</span>`;
             }
 
             const canRemove = canManageMembers && targetRole !== 'OWNER' && !isSelf && !(targetRole === 'ADMIN' && myRole !== 'OWNER');
 
             card.innerHTML = `
                 <div class="member-header">
-                    <div class="member-avatar">${initial}</div>
+                    <div class="member-avatar">${esc(initial)}</div>
                     <div class="member-info">
-                        <span class="member-email" title="${m.email}">${m.email}</span>
+                        <span class="member-email" title="${esc(m.email)}">${esc(m.email)}</span>
                         <div class="member-status">
                             <span class="status-indicator green" style="width: 6px; height: 6px; margin: 0;"></span>
                             <span>${isSelf ? 'You (Current Session)' : 'Active Workspace Member'}</span>
@@ -179,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div>${roleControl}</div>
                     <div class="member-actions">
                         ${canRemove ? `
-                            <button class="action-btn-mini danger remove-member-btn" data-email="${m.email}" title="Revoke Membership">
+                            <button class="action-btn-mini danger remove-member-btn" data-email="${esc(m.email)}" title="Revoke Membership">
                                 <i class="fa-solid fa-user-xmark"></i>
                             </button>
                         ` : `
@@ -274,10 +276,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             inviteModal.style.display = 'none';
             inviteForm.reset();
-            notifications.showToast('Invite Dispatched', `Security credentials initialized for ${email}.`, 'success');
-            loadMembers(projectId);
+            notifications.showToast('Invite Dispatched', `Security credentials initialized for ${esc(email)}.`, 'success');
+            loadMembers(projectId, projectName);
         } catch (err) {
-            notifications.showToast('Dispatch Failed', err.message, 'error');
+            notifications.showToast('Dispatch Failed', esc(err.message), 'error');
         }
     };
 

@@ -43,6 +43,17 @@ public class ApiKey {
     @Column(name = "expiry_date")
     private LocalDate expiryDate;
 
+    @Builder.Default
+    @Column(name = "current_version")
+    private Integer currentVersion = 1;
+
+    public Integer getCurrentVersion() {
+        return currentVersion == null ? 1 : currentVersion;
+    }
+
+    @OneToMany(mappedBy = "apiKey", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ApiKeyVersion> versions;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

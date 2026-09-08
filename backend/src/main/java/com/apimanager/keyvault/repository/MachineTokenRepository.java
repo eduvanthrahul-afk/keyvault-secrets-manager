@@ -10,4 +10,8 @@ public interface MachineTokenRepository extends JpaRepository<MachineToken, UUID
     List<MachineToken> findByProject_Id(UUID projectId);
 
     Optional<MachineToken> findByTokenId(String tokenId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByProject(com.apimanager.keyvault.model.Project project);
 }

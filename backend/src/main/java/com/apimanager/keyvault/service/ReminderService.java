@@ -41,7 +41,7 @@ public class ReminderService {
         message.setSubject("API Key Expiry Reminder: " + key.getName());
         message.setText("Hello,\n\nYour API key '" + key.getName() + "' for service '" + key.getService() +
                 "' in project '" + key.getProject().getName() + "' is set to expire on " + key.getExpiryDate() +
-                ".\n\nPlease log in to KeyVault to manage your keys.\n\nBest regards,\nKeyVault Team");
+                ".\n\nPlease log in to Kypher to manage your keys.\n\nBest regards,\nKypher Team");
 
         try {
             mailSender.send(message);

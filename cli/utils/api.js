@@ -17,6 +17,10 @@ const api = {
         login: async (email, password) => {
             const res = await axios.post(`${AUTH_URL}/login`, { email, password });
             return res.data;
+        },
+        getSalt: async (email) => {
+            const res = await axios.get(`${AUTH_URL}/salt`, { params: { email } });
+            return res.data;
         }
     },
     projects: {
@@ -36,8 +40,8 @@ const api = {
         }
     },
     tokens: {
-        verify: async (tokenId, tokenHash) => {
-            const res = await axios.post(`${BASE_URL}/tokens/verify`, { tokenId, tokenHash });
+        verify: async (tokenId, tokenHash, environment = null) => {
+            const res = await axios.post(`${BASE_URL}/tokens/verify`, { tokenId, tokenHash, environment });
             return res.data;
         }
     }

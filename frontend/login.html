@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | KeyVault Pro</title>
+    <title>Login | Kypher Pro</title>
+    <!-- Theme Orchestrator -->
+    <script src="js/theme-manager.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,7 +15,14 @@
     <div class="auth-wrapper fade-in">
         <div class="auth-side-info">
             <div class="app-logo">
-                <i class="fa-solid fa-vault" style="color: white; font-size: 24px;"></i>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" fill="none" style="display:block;margin:auto;">
+                    <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon>
+                    <line x1="12" y1="22" x2="12" y2="15.5"></line>
+                    <polyline points="22 8.5 12 15.5 2 8.5"></polyline>
+                    <polyline points="2 15.5 12 8.5 22 15.5"></polyline>
+                    <line x1="12" y1="2" x2="12" y2="8.5"></line>
+                </svg>
             </div>
             <h1 class="auth-info-title">Secure Your API Infrastructure</h1>
             <p class="auth-info-desc">Professional-grade secrets management for engineering teams. Protect your keys,
@@ -21,7 +30,7 @@
 
             <ul class="feature-hints">
                 <li class="feature-hint-item">
-                    <div class="feature-hint-icon"><i class="fa-solid fa-shield-check"></i></div>
+                    <div class="feature-hint-icon"><i class="fa-solid fa-shield-halved"></i></div>
                     <div class="feature-hint-text">
                         <b>End-to-End Encryption</b>
                         <span>AES-256-GCM protection for every cryptographic secret.</span>
@@ -75,7 +84,7 @@
 
                 <footer
                     style="margin-top: 2.5rem; border-top: 1px solid var(--border-soft); padding-top: 2rem; text-align: center;">
-                    <p class="text-muted" style="font-size: 14px;">New to KeyVault? <a href="register.html"
+                    <p class="text-muted" style="font-size: 14px;">New to Kypher? <a href="register.html"
                             style="color: var(--accent-1); font-weight: 700; text-decoration: none;">Create Enterprise
                             Account</a></p>
                 </footer>

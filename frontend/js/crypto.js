@@ -8,13 +8,7 @@ const CryptoModule = {
     KEY_LENGTH: 256,
     ALGO: 'AES-GCM',
 
-    /**
-     * Derives an encryption key from a master password and salt.
-     * @param {string} password - The master password
-     * @param {string} saltHex - The hex-encoded salt
-     * @returns {Promise<CryptoKey>}
-     */
-    async deriveKey(password, saltHex) {
+    async generateAuthHash(password, saltHex) {
         const encoder = new TextEncoder();
         const baseKey = await crypto.subtle.importKey(
             'raw',
@@ -26,6 +20,43 @@ const CryptoModule = {
 
         const salt = this.hexToBuffer(saltHex);
 
+        // Stage 1: Create Auth_Hash (100k iterations)
+        const authHashKey = await crypto.subtle.deriveKey(
+            {
+                name: 'PBKDF2',
+                salt: salt,
+                iterations: this.PBKDF2_ITERATIONS,
+                hash: 'SHA-256'
+            },
+            baseKey,
+            { name: 'HMAC', hash: 'SHA-256', length: 256 },
+            true,
+            ['sign']
+        );
+
+        const exportedAuth = await crypto.subtle.exportKey("raw", authHashKey);
+        return this.bufferToHex(exportedAuth);
+    },
+
+    /**
+     * Derives an encryption key from a master password and salt.
+     * @param {string} password - The auth hash (Hash_Auth)
+     * @param {string} saltHex - The hex-encoded salt
+     * @returns {Promise<CryptoKey>}
+     */
+    async deriveKey(authHash, saltHex) {
+        const encoder = new TextEncoder();
+        const baseKey = await crypto.subtle.importKey(
+            'raw',
+            encoder.encode(authHash),
+            'PBKDF2',
+            false,
+            ['deriveKey']
+        );
+
+        const salt = this.hexToBuffer(saltHex);
+
+        // Stage 2: Create Master_Encryption_Key from Auth_Hash (another 100k iterations)
         return await crypto.subtle.deriveKey(
             {
                 name: 'PBKDF2',
@@ -93,7 +124,7 @@ const CryptoModule = {
      */
     async saveSessionKey(key) {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('KeyVaultSession', 1);
+            const request = indexedDB.open('KypherSession', 1);
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains('session')) {
@@ -117,7 +148,7 @@ const CryptoModule = {
      */
     async getSessionKey() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('KeyVaultSession', 1);
+            const request = indexedDB.open('KypherSession', 1);
             request.onsuccess = (e) => {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains('session')) return resolve(null);
@@ -132,7 +163,7 @@ const CryptoModule = {
 
     async clearSessionVault() {
         return new Promise((resolve) => {
-            const request = indexedDB.deleteDatabase('KeyVaultSession');
+            const request = indexedDB.deleteDatabase('KypherSession');
             request.onsuccess = () => resolve();
             request.onerror = () => resolve();
         });
@@ -244,50 +275,18 @@ const CryptoModule = {
             encProjectKey = currentProject.encryptedProjectKey;
         }
 
-        // --- LEGACY BACKWARD COMPATIBILITY ---
-        // If this project was created BEFORE Zero-Knowledge identities,
-        // or the user hasn't migrated, use the deterministic fallback algorithm.
         if (!encProjectKey) {
-            return await this.getLegacyProjectKey(projectId);
+            throw new Error("This project has no encrypted master key. Please delete and re-create it using the new Zero-Knowledge identity system.");
         }
 
         const sessionKey = await this.getSessionKey();
         if (!sessionKey) throw new Error("Missing session key. Please login again.");
 
-        const encPrivKey = localStorage.getItem('encrypted_private_key');
+        const encPrivKey = sessionStorage.getItem('encrypted_private_key') || localStorage.getItem('encrypted_private_key');
         if (!encPrivKey) throw new Error("Missing private key. Please re-register or login again.");
 
         const rsaPrivateKey = await this.decryptAndImportPrivateKey(encPrivKey, sessionKey);
         return await this.unwrapProjectKey(encProjectKey, rsaPrivateKey);
-    },
-
-    /**
-     * Legacy deterministic project master key generator (symmetric).
-     */
-    async getLegacyProjectKey(projectId) {
-        const encoder = new TextEncoder();
-        const baseKey = await crypto.subtle.importKey(
-            'raw',
-            encoder.encode(projectId),
-            'PBKDF2',
-            false,
-            ['deriveKey']
-        );
-
-        const salt = this.hexToBuffer("abcdef1234567890abcdef1234567890");
-
-        return await crypto.subtle.deriveKey(
-            {
-                name: 'PBKDF2',
-                salt: salt,
-                iterations: 50000,
-                hash: 'SHA-256'
-            },
-            baseKey,
-            { name: this.ALGO, length: this.KEY_LENGTH },
-            true, // Extractable for token generation
-            ['encrypt', 'decrypt', 'wrapKey']
-        );
     },
 
     // Utilities

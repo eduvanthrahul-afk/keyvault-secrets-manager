@@ -14,14 +14,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (userEmailDisplay) userEmailDisplay.textContent = localStorage.getItem('user_email');
 
     // Check auth
-    if (!localStorage.getItem('jwt_token')) {
+    if (!localStorage.getItem('user_email')) {
         window.location.href = 'login.html';
         return;
     }
 
     const loadProjects = async () => {
         try {
+            // Telemetry Loading State
+            projectList.innerHTML = Array(3).fill(0).map(() => `
+                <div class="bento-card w-4 skeleton-card" style="position: relative; overflow: hidden; background: var(--surface-1); border: 1px solid var(--border);">
+                     <div class="scan-line" style="position: absolute; inset: 0; background: linear-gradient(to bottom, transparent, rgba(129, 140, 248, 0.1), transparent); height: 100%; width: 100%; filter: blur(20px); animation: scanLineMove 2s infinite linear; pointer-events: none;"></div>
+                     <div style="opacity: 0.5;">
+                         <div class="skeleton-text" style="width: 40%; background: var(--surface-3); height: 12px; border-radius: 4px; margin-bottom: 24px;"></div>
+                         <div class="skeleton-text" style="width: 80%; background: var(--surface-2); height: 24px; border-radius: 6px; margin-bottom: 12px;"></div>
+                         <div class="skeleton-text" style="width: 60%; background: var(--surface-2); height: 10px; border-radius: 4px;"></div>
+                     </div>
+                </div>
+            `).join('');
+
             allProjects = await ApiClient.projects.getAll();
+            if (!allProjects) return; // Authentication expiration handled by ApiClient
+
             renderProjects(allProjects);
             updateStats(allProjects);
 
@@ -40,36 +54,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const updateStats = async (projects) => {
+    const updateStats = (projects) => {
         const statProjects = document.getElementById('stat-projects');
         const statKeys = document.getElementById('stat-keys');
         const statExpiring = document.getElementById('stat-expiring');
 
         if (statProjects) statProjects.textContent = projects.length;
 
-        try {
-            let totalKeys = 0;
-            let totalExpiring = 0;
-            const now = new Date();
-            const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const totals = projects.reduce((acc, p) => {
+            acc.keys += (p.keyCount || 0);
+            acc.expiring += (p.expiringKeyCount || 0);
+            return acc;
+        }, { keys: 0, expiring: 0 });
 
-            for (const project of projects) {
-                const keys = await ApiClient.keys.getByProject(project.id);
-                totalKeys += keys.length;
-
-                keys.forEach(k => {
-                    if (k.expiryDate) {
-                        const expiry = new Date(k.expiryDate);
-                        if (expiry > now && expiry < nextWeek) totalExpiring++;
-                    }
-                });
-            }
-
-            if (statKeys) statKeys.textContent = totalKeys;
-            if (statExpiring) statExpiring.textContent = totalExpiring;
-        } catch (err) {
-            console.error("Failed to load key counts", err);
-        }
+        if (statKeys) statKeys.textContent = totals.keys;
+        if (statExpiring) statExpiring.textContent = totals.expiring;
     };
 
     window.deleteProject = async (id, name, event) => {
@@ -85,10 +84,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await ApiClient.projects.delete(id);
-            notifications.showToast('Workspace Purged', `The context "${name}" has been removed from the registry.`, 'success');
+            notifications.showToast('Workspace Purged', `The context "${esc(name)}" has been removed from the registry.`, 'success');
             loadProjects();
         } catch (err) {
-            notifications.showToast('Purge Failed', err.message, 'error');
+            notifications.showToast('Purge Failed', esc(err.message), 'error');
         }
     };
 
@@ -99,8 +98,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             projectList.innerHTML = `
                 <div style="grid-column: 1/-1; padding: 6rem 24px; text-align: center; border: 1px dashed var(--border); border-radius: 24px; background: var(--surface-1);">
                     <div style="font-size: 3rem; margin-bottom: 1.5rem; opacity: 0.5;">📂</div>
-                    <h3 style="margin-bottom: 0.5rem; font-weight: 700;">${projectSearch && projectSearch.value ? 'No Matching Contexts' : 'Registry Empty'}</h3>
-                    <p class="text-muted" style="max-width: 320px; margin: 0 auto;">${projectSearch && projectSearch.value ? 'No workspace matches your search term in the secure registry.' : 'Initialize your first security context to begin managing encrypted API keys.'}</p>
+                    <h3 style="margin-bottom: 0.5rem; font-weight: 700;">${(projectSearch && projectSearch.value) ? 'No Matching Contexts' : 'Registry Empty'}</h3>
+                    <p class="text-muted" style="max-width: 320px; margin: 0 auto;">${(projectSearch && projectSearch.value) ? `No workspace matches the term "${esc(projectSearch.value)}" in the secure registry.` : 'Initialize your first security context to begin managing encrypted API keys.'}</p>
                 </div>
             `;
             return;
@@ -108,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         projects.forEach(project => {
             const card = document.createElement('div');
-            card.className = 'project-card-premium';
+            card.className = 'bento-card w-4 project-card-premium';
 
             const tag = (project.tag || 'Unset').toLowerCase();
             const isProd = tag === 'prod' || tag === 'production';
@@ -127,16 +126,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <i class="fa-solid fa-folder-closed"></i>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <span class="project-tag-pill ${isProd ? 'badge-prod' : 'badge-dev'}">${tag}</span>
+                        <span class="project-tag-pill ${isProd ? 'badge-prod' : 'badge-dev'}">${esc(tag)}</span>
                         ${isOwner ? `
-                        <button class="btn btn-ghost" onclick="deleteProject('${project.id}', '${project.name}', event)" style="width: 32px; height: 32px; padding: 0; color: var(--error); border-radius: 8px;" title="Purge Context">
+                        <button class="btn btn-ghost" onclick="deleteProject('${project.id}', '${esc(project.name.replace(/'/g, "\\'"))}', event)" style="width: 32px; height: 32px; padding: 0; color: var(--error); border-radius: 8px;" title="Purge Context">
                             <i class="fa-solid fa-trash-can" style="font-size: 13px;"></i>
                         </button>
                         ` : ''}
                     </div>
                 </div>
                 <div class="body">
-                    <h3 class="project-name-h3">${project.name}</h3>
+                    <h3 class="project-name-h3">${esc(project.name)}</h3>
                     <p class="text-meta" style="line-height: 1.4;">Active security vault containing managed secret keys and team access policies.</p>
                 </div>
                 <div class="footer">
@@ -169,15 +168,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tag = document.getElementById('project-tag').value;
 
         try {
-            // True Zero-Knowledge or Fallback
-            const rsaPublicKeyHex = localStorage.getItem('public_key');
-            let encryptedProjectKey = null;
-
-            if (rsaPublicKeyHex) {
-                const rsaPublicKey = await CryptoModule.importPublicKey(rsaPublicKeyHex);
-                const projectKey = await CryptoModule.generateProjectKey();
-                encryptedProjectKey = await CryptoModule.wrapProjectKey(projectKey, rsaPublicKey);
+            const rsaPublicKeyHex = sessionStorage.getItem('public_key') || localStorage.getItem('public_key');
+            if (!rsaPublicKeyHex) {
+                throw new Error("Missing secure identity. Please re-login to restore your encryption keys.");
             }
+
+            const rsaPublicKey = await CryptoModule.importPublicKey(rsaPublicKeyHex);
+            const projectKey = await CryptoModule.generateProjectKey();
+            const encryptedProjectKey = await CryptoModule.wrapProjectKey(projectKey, rsaPublicKey);
 
             await ApiClient.projects.create({ name, tag, encryptedProjectKey });
             projectModal.style.display = 'none';
