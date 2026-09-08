@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('jwt_token', response.token);
                 localStorage.setItem('user_email', response.email);
                 localStorage.setItem('user_salt', response.salt);
+                if (response.publicKey) localStorage.setItem('public_key', response.publicKey);
+                if (response.encryptedPrivateKey) localStorage.setItem('encrypted_private_key', response.encryptedPrivateKey);
 
                 const sessionKey = await CryptoModule.deriveKey(password, response.salt);
                 await CryptoModule.saveSessionKey(sessionKey);
@@ -41,7 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const salt = CryptoModule.generateSalt();
 
             try {
-                await ApiClient.auth.register({ email, password, salt });
+                // Generate Zero-Knowledge RSA Identity
+                const sessionKey = await CryptoModule.deriveKey(password, salt);
+                const rsaKeyPair = await CryptoModule.generateRSAKeyPair();
+
+                const publicKey = await CryptoModule.exportPublicKey(rsaKeyPair);
+                const encryptedPrivateKey = await CryptoModule.exportAndEncryptPrivateKey(rsaKeyPair, sessionKey);
+
+                await ApiClient.auth.register({ email, password, salt, publicKey, encryptedPrivateKey });
                 notifications.showToast('Account Created', 'Architecture registry updated. Please login.', 'success');
                 setTimeout(() => window.location.href = 'login.html', 1500);
             } catch (err) {

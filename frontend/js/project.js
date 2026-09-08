@@ -9,6 +9,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const decryptAllBtn = document.getElementById('decrypt-all-btn');
     const keySearch = document.getElementById('key-search');
 
+    // Token UI
+    const tabSecrets = document.getElementById('tab-secrets');
+    const tabTokens = document.getElementById('tab-tokens');
+    const secretsView = document.getElementById('secrets-view');
+    const tokensView = document.getElementById('tokens-view');
+    const tokensContainer = document.getElementById('tokens-container');
+    const addTokenBtn = document.getElementById('add-token-btn');
+    const tokenModal = document.getElementById('token-modal');
+    const tokenCreationForm = document.getElementById('token-creation-form');
+    const tokenSuccessView = document.getElementById('token-success-view');
+    const confirmTokenBtn = document.getElementById('confirm-token-btn');
+    const generatedTokenDisplay = document.getElementById('generated-token-display');
+
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
 
@@ -94,6 +107,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    const loadTokens = async () => {
+        try {
+            const tokens = await ApiClient.tokens.getByProject(projectId);
+            renderTokens(tokens);
+        } catch (err) {
+            notifications.showToast('Fetch Error', `Failed to load machine tokens: ${err.message}`, 'error');
+        }
+    };
+
+    const renderTokens = (tokens) => {
+        tokensContainer.innerHTML = '';
+        if (tokens.length === 0) {
+            tokensContainer.innerHTML = `
+                <div style="padding: 4rem; text-align: center; border: 1px dashed var(--border-base); border-radius: var(--radius-xl); opacity: 0.6;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🤖</div>
+                    <h3 style="margin-bottom: 0.5rem;">No Machine Tokens</h3>
+                    <p class="text-muted">Generate a token to allow automated CI/CD access.</p>
+                </div>
+            `;
+            return;
+        }
+
+        tokens.forEach(token => {
+            const item = document.createElement('div');
+            item.className = 'key-item';
+            item.innerHTML = `
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase;">Label</div>
+                    <div style="font-weight: 600;">${token.name}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase;">Token ID</div>
+                    <code class="mono" style="font-size: 11px;">${token.tokenId}</code>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase;">Created</div>
+                    <div class="text-muted" style="font-size: 12px;">${new Date(token.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div style="text-align: right;">
+                    <button class="btn btn-ghost" style="color: var(--error);" onclick="revokeToken('${token.id}')">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `;
+            tokensContainer.appendChild(item);
+        });
+    };
+
     if (keySearch) {
         keySearch.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -105,6 +166,118 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderKeys(filtered);
         });
     }
+
+    // Tabs logic
+    if (tabSecrets && tabTokens) {
+        tabSecrets.onclick = () => {
+            tabSecrets.classList.add('active');
+            tabSecrets.style.borderBottom = '2px solid var(--primary)';
+            tabSecrets.style.color = 'var(--text-primary)';
+            tabTokens.classList.remove('active');
+            tabTokens.style.borderBottom = '2px solid transparent';
+            tabTokens.style.color = 'var(--text-secondary)';
+            secretsView.style.display = 'block';
+            tokensView.style.display = 'none';
+        };
+
+        tabTokens.onclick = () => {
+            tabTokens.classList.add('active');
+            tabTokens.style.borderBottom = '2px solid var(--primary)';
+            tabTokens.style.color = 'var(--text-primary)';
+            tabSecrets.classList.remove('active');
+            tabSecrets.style.borderBottom = '2px solid transparent';
+            tabSecrets.style.color = 'var(--text-secondary)';
+            secretsView.style.display = 'none';
+            tokensView.style.display = 'block';
+            loadTokens();
+        };
+    }
+
+    // Token Modals logic
+    if (addTokenBtn) {
+        addTokenBtn.onclick = () => {
+            tokenModal.style.display = 'flex';
+            tokenCreationForm.style.display = 'block';
+            tokenSuccessView.style.display = 'none';
+        };
+        document.getElementById('close-token-modal').onclick = () => tokenModal.style.display = 'none';
+        document.getElementById('cancel-token').onclick = () => tokenModal.style.display = 'none';
+        document.getElementById('close-token-success').onclick = () => {
+            tokenModal.style.display = 'none';
+            loadTokens();
+        };
+
+        confirmTokenBtn.onclick = async () => {
+            const name = document.getElementById('token-name').value.trim();
+            if (!name) return notifications.showToast('Validation Error', 'Please provide a label for this token.', 'error');
+
+            confirmTokenBtn.disabled = true;
+            confirmTokenBtn.textContent = 'Securing...';
+
+            try {
+                // 1. Decrypt our master project key first
+                const projectKey = await CryptoModule.getProjectKey(projectId);
+
+                // 2. Generate a random Token Secret
+                const tokenSecret = CryptoModule.generateSalt() + CryptoModule.generateSalt(); // 64 chars
+                const tokenId = 'kv_' + CryptoModule.generateSalt().substring(0, 12);
+
+                // 3. Hash the secret for backend verification
+                const encoder = new TextEncoder();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(tokenSecret));
+                const tokenHash = CryptoModule.bufferToHex(hashBuffer);
+
+                // 4. Encrypt project key with token secret
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const saltHex = CryptoModule.bufferToHex(salt);
+                const ivHex = CryptoModule.bufferToHex(iv);
+
+                // Use PBKDF2 to derive a key from the token secret
+                const baseKey = await crypto.subtle.importKey('raw', encoder.encode(tokenSecret), 'PBKDF2', false, ['deriveKey']);
+                const encKey = await crypto.subtle.deriveKey(
+                    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+                    baseKey,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['wrapKey']
+                );
+
+                const wrappedProjectKey = await crypto.subtle.wrapKey('raw', projectKey, encKey, { name: 'AES-GCM', iv: iv });
+                const encryptedProjectKeyStr = saltHex + ':' + ivHex + ':' + CryptoModule.bufferToHex(wrappedProjectKey);
+
+                // 5. Save to backend
+                await ApiClient.tokens.create(projectId, {
+                    name,
+                    tokenId,
+                    tokenHash,
+                    encryptedProjectKey: encryptedProjectKeyStr
+                });
+
+                tokenCreationForm.style.display = 'none';
+                tokenSuccessView.style.display = 'block';
+                generatedTokenDisplay.textContent = tokenId + '.' + tokenSecret;
+
+            } catch (err) {
+                notifications.showToast('Provisioning Failed', err.message, 'error');
+            } finally {
+                confirmTokenBtn.disabled = false;
+                confirmTokenBtn.textContent = 'Generate Pipeline Token';
+            }
+        };
+    }
+
+    window.revokeToken = async (id) => {
+        const confirmed = await notifications.confirm('Revoke Token', 'This will immediately disconnect any CI/CD pipelines using this identity.', 'Revoke Identity', 'error');
+        if (!confirmed) return;
+        try {
+            await ApiClient.tokens.delete(id);
+            notifications.showToast('Identity Purged', 'Machine token killed.', 'success');
+            loadTokens();
+        } catch (err) {
+            notifications.showToast('Revocation Error', err.message, 'error');
+        }
+    };
 
     const isExpired = (date) => {
         if (!date) return false;

@@ -29,6 +29,12 @@ public class User {
     @Column(nullable = false)
     private String salt; // Used for client-side encryption key derivation
 
+    @Column(columnDefinition = "TEXT")
+    private String publicKey;
+
+    @Column(columnDefinition = "TEXT")
+    private String encryptedPrivateKey;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

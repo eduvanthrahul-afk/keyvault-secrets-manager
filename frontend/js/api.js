@@ -70,10 +70,18 @@ const ApiClient = {
         update: (id, data) => ApiClient.request(`/api/projects/${id}`, 'PUT', data),
         delete: (id) => ApiClient.request(`/api/projects/${id}`, 'DELETE'),
         getMembers: (id) => ApiClient.request(`/api/projects/${id}/members`),
-        addMember: (id, email, role) => ApiClient.request(`/api/projects/${id}/members`, 'POST', { email, role }),
+        getPublicKey: (id, email) => ApiClient.request(`/api/projects/${id}/members/public-key?email=${encodeURIComponent(email)}`),
+        addMember: (id, email, role, encryptedProjectKey) => ApiClient.request(`/api/projects/${id}/members`, 'POST', { email, role, encryptedProjectKey }),
         removeMember: (id, email) => ApiClient.request(`/api/projects/${id}/members/remove`, 'POST', { email }),
         updateMemberRole: (id, email, role) => ApiClient.request(`/api/projects/${id}/members/role`, 'PUT', { email, role }),
         getAuditLogs: (id) => ApiClient.request(`/api/projects/${id}/audit-logs`)
+    },
+
+    tokens: {
+        getByProject: (projectId) => ApiClient.request(`/api/projects/${projectId}/tokens`),
+        create: (projectId, data) => ApiClient.request(`/api/projects/${projectId}/tokens`, 'POST', data),
+        delete: (tokenId) => ApiClient.request(`/api/tokens/${tokenId}`, 'DELETE'),
+        verify: (data) => ApiClient.request('/api/tokens/verify', 'POST', data)
     },
 
     keys: {

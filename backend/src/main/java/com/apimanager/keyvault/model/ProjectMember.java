@@ -28,4 +28,7 @@ public class ProjectMember {
     private User user;
 
     private String role; // "OWNER", "MEMBER"
+
+    @Column(columnDefinition = "TEXT")
+    private String encryptedProjectKey;
 }

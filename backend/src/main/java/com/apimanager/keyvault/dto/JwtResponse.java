@@ -9,4 +9,6 @@ public class JwtResponse {
     private String token;
     private String email;
     private String salt;
+    private String publicKey;
+    private String encryptedPrivateKey;
 }

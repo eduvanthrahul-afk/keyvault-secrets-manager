@@ -78,42 +78,67 @@
             </header>
 
             <main class="content-area fade-in">
-                <div class="flex-between" style="margin-bottom: 48px;">
-                    <div>
+                <div class="flex-between" style="margin-bottom: 48px; align-items: flex-start;">
+                    <div style="flex: 1; min-width: 0;">
                         <div id="project-tag-display" class="badge badge-dev"
-                            style="margin-bottom: 16px; border-radius: 6px; padding: 6px 10px;">Production</div>
-                        <h1 id="project-name-title">Workspace Vault</h1>
+                            style="margin-bottom: 16px; border-radius: 6px; padding: 6px 10px; display: inline-block;">
+                            Production</div>
+                        <h1 id="project-name-title" style="word-break: break-word;">Workspace Vault</h1>
                         <p class="text-body text-muted" style="margin-top: 8px; max-width: 500px;">Direct interface to
                             manage and rotate sensitive API credentials.</p>
                     </div>
-                    <div style="display: flex; gap: 12px; height: 36px;">
-                        <button id="decrypt-all-btn" class="btn btn-secondary">
-                            <i class="fa-solid fa-lock-open" style="font-size: 12px;"></i> Unlock All
+                    <div style="display: flex; gap: 12px; flex-shrink: 0; align-items: center;">
+                        <button id="decrypt-all-btn" class="btn btn-secondary" style="white-space: nowrap;">
+                            <i class="fa-solid fa-lock-open" style="font-size: 12px; margin-right: 6px;"></i> Unlock All
                         </button>
                         <button id="add-key-btn" class="btn btn-primary"
-                            style="padding-left: 14px; padding-right: 18px;">
-                            <i class="fa-solid fa-plus" style="font-size: 12px; margin-right: 4px;"></i> Add Secret Key
+                            style="padding-left: 14px; padding-right: 18px; white-space: nowrap;">
+                            <i class="fa-solid fa-plus" style="font-size: 12px; margin-right: 6px;"></i> Add Secret Key
                         </button>
                     </div>
                 </div>
 
-                <div class="flex-between" style="margin-bottom: 24px; align-items: center;">
-                    <h3 style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Managed Secrets</h3>
-                    <div class="search-container-premium" style="width: 380px; margin: 0;">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="key-search" class="search-input-premium"
-                            placeholder="Filter vault by keyword, provider, or environment...">
+                <!-- Tabs -->
+                <div class="tabs-container"
+                    style="margin-bottom: 32px; border-bottom: 1px solid var(--border); display: flex; gap: 32px; align-items: flex-end;">
+                    <button id="tab-secrets" class="tab-link active"
+                        style="padding: 12px 4px; background: none; border: none; font-weight: 600; cursor: pointer; color: var(--text-primary); border-bottom: 2px solid var(--primary); display: flex; align-items: center;">
+                        <i class="fa-solid fa-key" style="margin-right: 8px; font-size: 13px;"></i> Secrets
+                    </button>
+                    <button id="tab-tokens" class="tab-link"
+                        style="padding: 12px 4px; background: none; border: none; font-weight: 500; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; display: flex; align-items: center;">
+                        <i class="fa-solid fa-robot" style="margin-right: 8px; font-size: 13px;"></i> CI/CD Tokens
+                    </button>
+                </div>
+
+                <!-- Secrets View -->
+                <div id="secrets-view" style="width: 100%;">
+                    <div id="keys-container" class="keys-container"
+                        style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                        <!-- Key items -->
+                        <div class="empty-state" style="padding: 80px 24px; text-align: center; width: 100%;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            <p
+                                style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">
+                                Synchronizing with vault</p>
+                            <p class="text-muted">Fetching encrypted credentials...</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Keys List (Preserved ID) -->
-                <div id="keys-container" class="keys-container">
-                    <!-- JavaScript will inject .key-item tiles here -->
-                    <div class="empty-state" style="padding: 80px 24px;">
-                        <i class="fa-solid fa-circle-notch fa-spin"></i>
-                        <p style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">
-                            Synchronizing with vault</p>
-                        <p class="text-muted">Fetching encrypted credentials...</p>
+                <!-- Tokens View -->
+                <div id="tokens-view" style="display: none; width: 100%;">
+                    <div class="flex-between" style="margin-bottom: 24px; align-items: center;">
+                        <p class="text-body text-muted">Machine identities that can bypass interactive login for
+                            automated pipelines.</p>
+                        <button id="add-token-btn" class="btn btn-secondary btn-sm"
+                            style="font-size: 13px; height: 32px;">
+                            <i class="fa-solid fa-plus" style="margin-right: 6px;"></i> Generate Token
+                        </button>
+                    </div>
+                    <div id="tokens-container" class="keys-container"
+                        style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                        <!-- Token items -->
                     </div>
                 </div>
             </main>
@@ -214,6 +239,41 @@
                     <button type="submit" id="save-key-btn" class="btn btn-primary">Encrypt & Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal for New Machine Token -->
+    <div class="modal-overlay" id="token-modal" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Generate Machine Identity</h2>
+                <button id="close-token-modal" class="btn btn-ghost"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="token-creation-form">
+                <div class="form-group">
+                    <label class="label">Token Label</label>
+                    <input type="text" id="token-name" class="input" placeholder="e.g. GitHub Actions - Production">
+                </div>
+                <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" id="cancel-token" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="confirm-token-btn" class="btn btn-primary">Generate Pipeline
+                        Token</button>
+                </div>
+            </div>
+            <div id="token-success-view" style="display: none; text-align: center; padding: 12px 0;">
+                <div
+                    style="background: var(--surface-2); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px dashed var(--primary);">
+                    <p class="label" style="margin-bottom: 12px;">Your CI/CD Token Secret</p>
+                    <p class="mono" id="generated-token-display"
+                        style="font-size: 18px; color: var(--primary); word-break: break-all; font-weight: 700;">
+                    </p>
+                </div>
+                <p class="text-body text-muted" style="margin-bottom: 24px;">Copy this secret now. It will
+                    <b>never</b> be shown again. Use it as <code>KV_TOKEN</code> in your CLI or CI/CD settings.
+                </p>
+                <button id="close-token-success" class="btn btn-primary" style="width: 100%;">I have saved it
+                    safely</button>
+            </div>
         </div>
     </div>
 

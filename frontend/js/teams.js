@@ -250,11 +250,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     inviteForm.onsubmit = async (e) => {
         e.preventDefault();
         const projectId = projectSelector.value;
-        const email = document.getElementById('invite-email').value;
+        const email = document.getElementById('invite-email').value.trim();
         const role = document.getElementById('invite-role').value;
 
         try {
-            await ApiClient.projects.addMember(projectId, email, role);
+            // True Zero-Knowledge Access Sharing
+            const keyResponse = await ApiClient.projects.getPublicKey(projectId, email);
+            if (!keyResponse || !keyResponse.publicKey) {
+                throw new Error("Target user hasn't generated a Zero-Knowledge Identity. Ask them to register first.");
+            }
+
+            const rsaPublicKey = await CryptoModule.importPublicKey(keyResponse.publicKey);
+
+            // Decrypt our own master AES project key first
+            const me = currentMembers.find(m => m.email && m.email.toLowerCase() === currentUserEmail);
+            const myEncKey = me ? me.encryptedProjectKey : null;
+            const projectKey = await CryptoModule.getProjectKey(projectId, myEncKey);
+
+            // Re-encrypt it with the target user's public key
+            const targetEncryptedProjectKey = await CryptoModule.wrapProjectKey(projectKey, rsaPublicKey);
+
+            await ApiClient.projects.addMember(projectId, email, role, targetEncryptedProjectKey);
+
             inviteModal.style.display = 'none';
             inviteForm.reset();
             notifications.showToast('Invite Dispatched', `Security credentials initialized for ${email}.`, 'success');

@@ -44,10 +44,11 @@ public class TeamController {
         try {
             String email = body.get("email");
             String role = body.get("role"); // Extract role from request
+            String encryptedProjectKey = body.get("encryptedProjectKey");
             if (email == null || email.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
             }
-            teamService.addMember(projectId, email, role, getCurrentUser());
+            teamService.addMember(projectId, email, role, encryptedProjectKey, getCurrentUser());
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -80,6 +81,20 @@ public class TeamController {
             }
             teamService.updateMemberRole(projectId, email, role, getCurrentUser());
             return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/public-key")
+    public ResponseEntity<?> getPublicKey(@PathVariable("projectId") UUID projectId,
+            @RequestParam("email") String email) {
+        try {
+            User currentUser = getCurrentUser();
+            teamService.getProjectMembers(projectId, currentUser); // Ensure access
+            User user = userRepository.findByEmail(email.toLowerCase().trim())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return ResponseEntity.ok(Map.of("publicKey", user.getPublicKey() != null ? user.getPublicKey() : ""));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

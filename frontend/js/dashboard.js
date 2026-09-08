@@ -169,7 +169,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tag = document.getElementById('project-tag').value;
 
         try {
-            await ApiClient.projects.create({ name, tag });
+            // True Zero-Knowledge or Fallback
+            const rsaPublicKeyHex = localStorage.getItem('public_key');
+            let encryptedProjectKey = null;
+
+            if (rsaPublicKeyHex) {
+                const rsaPublicKey = await CryptoModule.importPublicKey(rsaPublicKeyHex);
+                const projectKey = await CryptoModule.generateProjectKey();
+                encryptedProjectKey = await CryptoModule.wrapProjectKey(projectKey, rsaPublicKey);
+            }
+
+            await ApiClient.projects.create({ name, tag, encryptedProjectKey });
             projectModal.style.display = 'none';
             projectForm.reset();
             notifications.showToast('Workspace Created', `Successfully initialized context "${name}".`, 'success');

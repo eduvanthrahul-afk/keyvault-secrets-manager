@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+
 @Service
 @Transactional
 public class TeamService {
@@ -30,6 +33,15 @@ public class TeamService {
 
     @Autowired
     private AuditService auditService;
+
+    private User getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername();
+            return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        }
+        throw new RuntimeException("Unauthenticated access");
+    }
 
     public boolean hasAtLeastRole(String userRole, String requiredRole) {
         if (userRole == null || userRole.isEmpty())
@@ -78,11 +90,13 @@ public class TeamService {
                     Map<String, String> mData = new HashMap<>();
                     mData.put("email", m.getUser().getEmail());
                     mData.put("role", m.getRole());
+                    mData.put("publicKey", m.getUser().getPublicKey());
+                    mData.put("encryptedProjectKey", m.getEncryptedProjectKey());
                     return mData;
                 }).toList();
     }
 
-    public void addMember(UUID projectId, String email, String role, User currentUser) {
+    public void addMember(UUID projectId, String email, String role, String encryptedProjectKey, User currentUser) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
@@ -113,6 +127,7 @@ public class TeamService {
                 .project(project)
                 .user(userToAdd)
                 .role(requestedRole)
+                .encryptedProjectKey(encryptedProjectKey)
                 .build();
         projectMemberRepository.save(newMember);
 
@@ -212,7 +227,7 @@ public class TeamService {
         UUID uId = user.getId();
         String uEmail = user.getEmail() != null ? user.getEmail().toLowerCase().trim() : "";
 
-        logger.debug("Verifying membership for user {} ({}) in project {} ({})", uEmail, uId, project.getName(), pId);
+        logger.info("Checking membership: user={} project={}", uEmail, project.getName());
 
         // 1. High priority: Check if user is the explicit owner/creator of the project
         // record
@@ -276,5 +291,22 @@ public class TeamService {
                 "Security violation: User {} ({}) attempted to access project {} ({}) without valid membership or ownership",
                 uEmail, uId, project.getName(), pId);
         throw new RuntimeException("Access Denied: You are not a member of this project.");
+    }
+
+    public void ensureAdmin(UUID projectId) {
+        User currentUser = getCurrentUser();
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        ProjectMember pm = ensureMembership(project, currentUser);
+        if (!hasAtLeastRole(pm.getRole(), "ADMIN")) {
+            throw new RuntimeException("Access Denied: Admin privileges required.");
+        }
+    }
+
+    public void ensureMembership(UUID projectId) {
+        User currentUser = getCurrentUser();
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        ensureMembership(project, currentUser);
     }
 }

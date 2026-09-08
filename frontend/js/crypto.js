@@ -138,14 +138,133 @@ const CryptoModule = {
         });
     },
 
+    // --- True Zero-Knowledge Operations ---
+
+    async generateRSAKeyPair() {
+        return await crypto.subtle.generateKey(
+            {
+                name: "RSA-OAEP",
+                modulusLength: 4096,
+                publicExponent: new Uint8Array([1, 0, 1]),
+                hash: "SHA-256",
+            },
+            true,
+            ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
+        );
+    },
+
+    async exportPublicKey(keyPair) {
+        const exported = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+        return this.bufferToHex(exported);
+    },
+
+    async importPublicKey(hexString) {
+        const buffer = this.hexToBuffer(hexString);
+        return await crypto.subtle.importKey(
+            "spki",
+            buffer,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["wrapKey", "encrypt"]
+        );
+    },
+
+    async exportAndEncryptPrivateKey(keyPair, sessionKey) {
+        const exported = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ciphertextBuffer = await crypto.subtle.encrypt(
+            { name: this.ALGO, iv: iv },
+            sessionKey,
+            exported
+        );
+        return this.bufferToHex(iv) + ":" + this.bufferToHex(ciphertextBuffer);
+    },
+
+    async decryptAndImportPrivateKey(encryptedHex, sessionKey) {
+        const parts = encryptedHex.split(':');
+        if (parts.length !== 2) throw new Error("Invalid private key format");
+        const iv = this.hexToBuffer(parts[0]);
+        const ciphertext = this.hexToBuffer(parts[1]);
+        const decryptedBuffer = await crypto.subtle.decrypt(
+            { name: this.ALGO, iv: iv },
+            sessionKey,
+            ciphertext
+        );
+        return await crypto.subtle.importKey(
+            "pkcs8",
+            decryptedBuffer,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["unwrapKey", "decrypt"]
+        );
+    },
+
+    async generateProjectKey() {
+        return await crypto.subtle.generateKey(
+            { name: this.ALGO, length: this.KEY_LENGTH },
+            true,
+            ["encrypt", "decrypt"]
+        );
+    },
+
+    async wrapProjectKey(projectKey, rsaPublicKey) {
+        const wrapped = await crypto.subtle.wrapKey(
+            "raw",
+            projectKey,
+            rsaPublicKey,
+            "RSA-OAEP"
+        );
+        return this.bufferToHex(wrapped);
+    },
+
+    async unwrapProjectKey(wrappedHex, rsaPrivateKey) {
+        const wrappedBuffer = this.hexToBuffer(wrappedHex);
+        return await crypto.subtle.unwrapKey(
+            "raw",
+            wrappedBuffer,
+            rsaPrivateKey,
+            "RSA-OAEP",
+            { name: this.ALGO, length: this.KEY_LENGTH },
+            true,
+            ["encrypt", "decrypt", "wrapKey"]
+        );
+    },
+
     /**
-     * Derives a deterministic shared encryption key for a project.
-     * In a production Zero-Knowledge architecture, this would use RSA public key exchange.
-     * For this MVP, we derive a symmetric key based on the unguessable Project UUID.
-     * @param {string} projectId 
-     * @returns {Promise<CryptoKey>}
+     * Helper to get project key from current user's session state.
      */
-    async getProjectKey(projectId) {
+    async getProjectKey(projectId, overrideEncPk = null) {
+        let encProjectKey = overrideEncPk;
+
+        if (!encProjectKey) {
+            const currentProject = JSON.parse(sessionStorage.getItem('current_project'));
+            if (!currentProject || currentProject.id !== projectId) {
+                throw new Error("Missing encrypted project context.");
+            }
+            encProjectKey = currentProject.encryptedProjectKey;
+        }
+
+        // --- LEGACY BACKWARD COMPATIBILITY ---
+        // If this project was created BEFORE Zero-Knowledge identities,
+        // or the user hasn't migrated, use the deterministic fallback algorithm.
+        if (!encProjectKey) {
+            return await this.getLegacyProjectKey(projectId);
+        }
+
+        const sessionKey = await this.getSessionKey();
+        if (!sessionKey) throw new Error("Missing session key. Please login again.");
+
+        const encPrivKey = localStorage.getItem('encrypted_private_key');
+        if (!encPrivKey) throw new Error("Missing private key. Please re-register or login again.");
+
+        const rsaPrivateKey = await this.decryptAndImportPrivateKey(encPrivKey, sessionKey);
+        return await this.unwrapProjectKey(encProjectKey, rsaPrivateKey);
+    },
+
+    /**
+     * Legacy deterministic project master key generator (symmetric).
+     */
+    async getLegacyProjectKey(projectId) {
         const encoder = new TextEncoder();
         const baseKey = await crypto.subtle.importKey(
             'raw',
@@ -155,7 +274,6 @@ const CryptoModule = {
             ['deriveKey']
         );
 
-        // Static system salt for project key derivation
         const salt = this.hexToBuffer("abcdef1234567890abcdef1234567890");
 
         return await crypto.subtle.deriveKey(
@@ -167,8 +285,8 @@ const CryptoModule = {
             },
             baseKey,
             { name: this.ALGO, length: this.KEY_LENGTH },
-            false,
-            ['encrypt', 'decrypt']
+            true, // Extractable for token generation
+            ['encrypt', 'decrypt', 'wrapKey']
         );
     },
 

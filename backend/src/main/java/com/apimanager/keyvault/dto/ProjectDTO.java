@@ -9,4 +9,5 @@ public class ProjectDTO {
     private String name;
     private String tag;
     private String ownerEmail;
+    private String encryptedProjectKey;
 }

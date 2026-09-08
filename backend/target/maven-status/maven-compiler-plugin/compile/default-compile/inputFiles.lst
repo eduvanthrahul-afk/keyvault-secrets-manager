@@ -7,10 +7,12 @@ X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\security\CustomUserD
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ProjectMemberRepository.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\User.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\controller\TeamController.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\MachineTokenRequest.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\AuditLogDTO.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\controller\ProjectController.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ApiKeyRepository.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\AuditLogRepository.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\MachineToken.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\ApiKey.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\ProjectRepository.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\ProjectDTO.java
@@ -21,7 +23,9 @@ X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\scripts\UserCheckScr
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\service\ReminderService.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\service\TeamService.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\service\AuditService.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\MachineTokenDTO.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\dto\JwtResponse.java
+X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\repository\MachineTokenRepository.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\model\ProjectMember.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\scripts\MemberCheckScript.java
 X:\ApiMAnager\backend\src\main\java\com\apimanager\keyvault\security\JwtUtils.java

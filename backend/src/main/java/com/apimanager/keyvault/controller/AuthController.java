@@ -43,6 +43,8 @@ public class AuthController {
                 .email(signUpRequest.getEmail())
                 .passwordHash(encoder.encode(signUpRequest.getPassword()))
                 .salt(signUpRequest.getSalt())
+                .publicKey(signUpRequest.getPublicKey())
+                .encryptedPrivateKey(signUpRequest.getEncryptedPrivateKey())
                 .build();
 
         userRepository.save(user);
@@ -60,7 +62,8 @@ public class AuthController {
 
         User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
 
-        return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt()));
+        return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt(), user.getPublicKey(),
+                user.getEncryptedPrivateKey()));
     }
 
     @PostMapping("/refresh")
@@ -75,6 +78,7 @@ public class AuthController {
         String email = authentication.getName();
         User user = userRepository.findByEmail(email).orElseThrow();
 
-        return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt()));
+        return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getSalt(), user.getPublicKey(),
+                user.getEncryptedPrivateKey()));
     }
 }

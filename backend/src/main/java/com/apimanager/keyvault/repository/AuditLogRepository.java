@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     List<AuditLog> findByProjectOrderByCreatedAtDesc(Project project);
+
+    void deleteByProject(Project project);
 }
