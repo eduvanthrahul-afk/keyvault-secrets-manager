@@ -76,7 +76,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:5500",
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "http://localhost:8080"));
+                "http://localhost:8080",
+                "null")); // Supports opening local test HTML directly from disk.
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(
                 Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "X-XSRF-TOKEN"));

@@ -94,77 +94,39 @@
                 </div>
             </header>
 
-            <!-- Main Content Area -->
-            <main class="content-area fade-in">
-                <!-- Welcome Section -->
-                <section class="dashboard-welcome">
-                    <div class="flex-between" style="align-items: center;">
+            <!-- Registry Atlas: a project index rather than a conventional dashboard -->
+            <main class="content-area registry-atlas fade-in">
+                <section class="atlas-intro">
+                    <div class="atlas-kicker">Kysper / secure workspace index</div>
+                    <div class="atlas-headline">
+                        <span class="atlas-number" id="welcome-project-count">...</span>
                         <div>
-                            <h1 style="font-size: 28px; margin-bottom: 8px;">Workspace Registry</h1>
-                            <p class="text-secondary" style="font-weight: 500;">Welcome back. You have <span
-                                    id="welcome-project-count" style="color: var(--accent-1);">...</span> active
-                                security contexts.</p>
+                            <h1>Contexts, not clutter.</h1>
+                            <p>Choose a security workspace to inspect keys, access, and the evidence trail.</p>
                         </div>
-                        <button id="new-project-btn" class="btn btn-primary"
-                            style="padding: 12px 24px; border-radius: 12px; font-weight: 600;">
-                            <i class="fa-solid fa-plus-circle" style="margin-right: 8px;"></i> Create Workspace
-                        </button>
+                    </div>
+                    <div class="atlas-action">
+                        <span class="atlas-status"><i></i> Registry synchronized</span>
+                        <button id="new-project-btn" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New workspace</button>
                     </div>
                 </section>
 
-                <!-- Premium Stats Grid -->
-                <section class="bento-grid" style="margin-bottom: 48px;" aria-label="Global Metrics">
-                    <div class="bento-card w-4 stat-card-premium">
-                        <div class="stat-icon-box" style="background: rgba(79, 70, 229, 0.1); color: var(--accent-1);">
-                            <i class="fa-solid fa-folder-tree"></i>
-                        </div>
-                        <div>
-                            <div class="text-meta" style="font-weight: 700; text-transform: uppercase;">Total Projects
-                            </div>
-                            <div id="stat-projects" class="stat-value" style="font-size: 24px;">--</div>
-                        </div>
-                    </div>
-                    <div class="bento-card w-4 stat-card-premium">
-                        <div class="stat-icon-box" style="background: rgba(59, 130, 246, 0.1); color: var(--info);">
-                            <i class="fa-solid fa-key"></i>
-                        </div>
-                        <div>
-                            <div class="text-meta" style="font-weight: 700; text-transform: uppercase;">Active Secrets
-                            </div>
-                            <div id="stat-keys" class="stat-value" style="font-size: 24px;">--</div>
-                        </div>
-                    </div>
-                    <div class="bento-card w-4 stat-card-premium"
-                        style="border-right-color: var(--danger); border-right-width: 3px;">
-                        <div class="stat-icon-box" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
-                            <i class="fa-solid fa-bolt-lightning"></i>
-                        </div>
-                        <div>
-                            <div class="text-meta"
-                                style="font-weight: 700; text-transform: uppercase; color: var(--danger);">Security Risk
-                            </div>
-                            <div id="stat-expiring" class="stat-value" style="font-size: 24px; color: var(--danger);">0
-                            </div>
-                        </div>
-                    </div>
+                <section class="atlas-ledger" aria-label="Registry totals">
+                    <div><span>Workspaces</span><strong id="stat-projects">--</strong></div>
+                    <div><span>Protected secrets</span><strong id="stat-keys">--</strong></div>
+                    <div><span>Need attention</span><strong id="stat-expiring">0</strong></div>
+                    <p>Every workspace is encrypted independently. Select one to enter its vault.</p>
                 </section>
 
-                <div class="flex-between" style="margin-bottom: 24px; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <h3 style="font-size: 18px; font-weight: 700;">Managed Environments</h3>
-                        <div class="badge badge-info" style="font-size: 10px; border-radius: 20px;">AES-256 Encrypted
+                <section class="atlas-index">
+                    <div class="atlas-index-head">
+                        <div><span class="atlas-kicker">Workspace directory</span><h2>Managed contexts</h2></div>
+                        <div class="form-group input-icon-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="project-search" class="input" placeholder="Filter contexts">
                         </div>
                     </div>
-                    <!-- Unified Search -->
-                    <div class="form-group input-icon-wrap" style="width: 340px; margin: 0;">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="project-search" class="input" placeholder="Search registry..."
-                            style="border-radius: 12px; background: var(--surface-1);">
-                    </div>
-                </div>
-
-                <!-- Projects Grid -->
-                <div id="project-list" class="bento-grid">
+                    <div id="project-list" class="project-index">
                     <!-- Project cards will be injected by dashboard.js using project-card-premium class -->
                     <div class="empty-state"
                         style="grid-column: 1/-1; padding: 100px 24px; background: transparent; border: 1px dashed var(--border-strong); position: relative; overflow: hidden;">
@@ -183,7 +145,8 @@
                         <p class="text-muted" style="max-width: 300px; margin: 0 auto; line-height: 1.6;">Synchronizing
                             workspace data with the distributed ledger. This may take a moment...</p>
                     </div>
-                </div>
+                    </div>
+                </section>
             </main>
         </div>
     </div>

@@ -8,6 +8,7 @@ import com.apimanager.keyvault.repository.UserRepository;
 import com.apimanager.keyvault.security.JwtUtils;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -48,6 +49,9 @@ public class AuthController {
 
         @Autowired
         private com.apimanager.keyvault.service.TokenBlacklistService tokenBlacklistService;
+
+        @Value("${app.testing.otp-required:true}")
+        private boolean otpRequired;
 
         @PostMapping("/otp/send")
         public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> requestBody) {
@@ -138,8 +142,9 @@ public class AuthController {
         public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
                 String normalizedEmail = signUpRequest.getEmail().toLowerCase().trim();
 
-                // Security Shield: Enforce verification ticket check
-                if (!otpService.isEmailVerified(normalizedEmail)) {
+                // Production defaults to requiring a verification ticket. Local testing can
+                // explicitly opt out through the ignored secrets.properties file.
+                if (otpRequired && !otpService.isEmailVerified(normalizedEmail)) {
                         return ResponseEntity.status(403)
                                         .body(Map.of("message",
                                                         "Error: Email verification required before registration."));
@@ -167,8 +172,10 @@ public class AuthController {
 
                 userRepository.save(user);
 
-                // Consume ticket after successful registration
-                otpService.consumeTicket(normalizedEmail);
+                // Consume a verification ticket after successful production registration.
+                if (otpRequired) {
+                        otpService.consumeTicket(normalizedEmail);
+                }
 
                 return ResponseEntity.ok(Map.of("message", "User registered successfully!"));
         }

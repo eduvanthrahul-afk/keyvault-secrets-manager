@@ -171,115 +171,41 @@
                 </div>
             </header>
 
-            <main class="content-area fade-in" style="padding: 40px; max-width: 1000px;">
-                <header style="margin-bottom: 40px;">
-                    <h1 style="font-size: 32px; margin-bottom: 8px;">Workspace Preferences</h1>
-                    <p class="text-secondary">Configure your vault's appearance and operational behavior.</p>
+            <main class="content-area operational-page settings-page fade-in" style="padding: 40px; max-width: 1000px;">
+                <header class="settings-masthead">
+                    <span class="atlas-kicker">Kysper / interface profile</span>
+                    <h1>Make the vault<br>yours.</h1>
+                    <p>Appearance preferences apply locally to this browser and never leave your device.</p>
                 </header>
 
-                <section class="card"
-                    style="margin-bottom: 32px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <div style="display: flex; align-items: flex-start; gap: 20px;">
-                        <div class="stat-icon-box"
-                            style="background: rgba(99, 102, 241, 0.1); color: var(--accent-1); font-size: 24px;">
-                            <i class="fa-solid fa-palette"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Interface Appearance</h3>
-                            <p class="text-secondary" style="margin-bottom: 24px;">Choose how Kypher Pro looks across
-                                your browser. Use high-contrast settings for better visibility.</p>
-
-                            <div class="theme-select-grid">
-                                <div id="theme-light" class="theme-card">
-                                    <div class="theme-preview preview-light">
-                                        <div class="preview-bar"></div>
-                                        <div class="preview-bar" style="width: 70%;"></div>
-                                        <div class="preview-bar" style="width: 40%;"></div>
-                                    </div>
-                                    <div style="font-weight: 700; color: var(--text-primary);">Standard Light</div>
-                                    <div class="text-meta" style="margin-top: 4px;">Clean and professional appearance.
-                                    </div>
-                                </div>
-
-                                <div id="theme-dark" class="theme-card">
-                                    <div class="theme-preview preview-dark">
-                                        <div class="preview-bar"></div>
-                                        <div class="preview-bar" style="width: 70%;"></div>
-                                        <div class="preview-bar" style="width: 40%;"></div>
-                                    </div>
-                                    <div style="font-weight: 700; color: var(--text-primary);">Premium Obsidian</div>
-                                    <div class="text-meta" style="margin-top: 4px;">Sophisticated dark interface.</div>
-                                </div>
-
-                                <div id="theme-system" class="theme-card">
-                                    <div class="theme-preview preview-system">
-                                        <!-- Dual side preview -->
-                                    </div>
-                                    <div style="font-weight: 700; color: var(--text-primary);">Sync with OS</div>
-                                    <div class="text-meta" style="margin-top: 4px;">Adapt to your system automatically.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <section class="settings-mode" aria-labelledby="appearance-title">
+                    <div class="settings-mode-copy">
+                        <span class="atlas-kicker">01 / display mode</span>
+                        <h2 id="appearance-title">Interface appearance</h2>
+                        <p>Choose the working surface that helps you read credentials and security events with confidence.</p>
+                    </div>
+                    <div class="theme-select-grid" role="radiogroup" aria-label="Theme selection">
+                        <button id="theme-light" class="theme-card" type="button">
+                            <span class="theme-preview preview-light"><span class="preview-bar"></span><span class="preview-bar" style="width:70%"></span></span>
+                            <span class="theme-name">Light</span><span class="theme-detail">Bright, precise</span>
+                        </button>
+                        <button id="theme-dark" class="theme-card" type="button">
+                            <span class="theme-preview preview-dark"><span class="preview-bar"></span><span class="preview-bar" style="width:70%"></span></span>
+                            <span class="theme-name">Obsidian</span><span class="theme-detail">Low-light focus</span>
+                        </button>
+                        <button id="theme-system" class="theme-card" type="button">
+                            <span class="theme-preview preview-system"></span>
+                            <span class="theme-name">System</span><span class="theme-detail">Follow device</span>
+                        </button>
                     </div>
                 </section>
 
-                <section class="card"
-                    style="margin-bottom: 32px; opacity: 0.6; cursor: not-allowed; border: 1px dashed var(--border);">
-                    <div style="display: flex; align-items: flex-start; gap: 20px;">
-                        <div class="stat-icon-box"
-                            style="background: rgba(59, 130, 246, 0.1); color: var(--info); font-size: 24px;">
-                            <i class="fa-solid fa-bolt"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                <h3 style="font-size: 20px; font-weight: 700;">Zero-Touch Auto-Save</h3>
-                                <span class="badge"
-                                    style="background: var(--surface-2); color: var(--text-muted); font-size: 10px;">Coming
-                                    Soon</span>
-                            </div>
-                            <p class="text-secondary">Automatically encrypt and version secrets as you type them into
-                                the creation forms. Includes real-time validation against known provider formats.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="card" style="margin-bottom: 32px; opacity: 0.6; cursor: not-allowed;">
-                    <div style="display: flex; align-items: flex-start; gap: 20px;">
-                        <div class="stat-icon-box"
-                            style="background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 24px;">
-                            <i class="fa-solid fa-shield-halved"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                <h3 style="font-size: 20px; font-weight: 700;">Hardware Security (HSM)</h3>
-                                <span class="badge" title="Enterprise Tier Only"
-                                    style="background: var(--surface-2); color: var(--text-muted); font-size: 10px;">Enterprise
-                                    Only</span>
-                            </div>
-                            <p class="text-secondary">Offload master key operations to a hardware-backed security module
-                                (e.g., AWS CloudHSM or Azure Key Vault HSM). Never store master shards in software
-                                memory.</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="card" style="margin-bottom: 32px; opacity: 0.6; cursor: not-allowed;">
-                    <div style="display: flex; align-items: flex-start; gap: 20px;">
-                        <div class="stat-icon-box"
-                            style="background: rgba(34, 197, 94, 0.1); color: var(--success); font-size: 24px;">
-                            <i class="fa-solid fa-fingerprint"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                <h3 style="font-size: 20px; font-weight: 700;">Multi-Factor Authentication</h3>
-                                <span class="badge"
-                                    style="background: var(--surface-2); color: var(--text-muted); font-size: 10px;">Developer
-                                    Preview</span>
-                            </div>
-                            <p class="text-secondary">Enforce an additional layer of identity verification (WebAuthn,
-                                TOTP, or Yubikey) before decrypting the local master vault session.</p>
-                        </div>
+                <section class="settings-roadmap" aria-labelledby="roadmap-title">
+                    <div><span class="atlas-kicker">02 / controlled rollout</span><h2 id="roadmap-title">Security capabilities</h2></div>
+                    <div class="roadmap-list">
+                        <article><span class="roadmap-number">01</span><div><h3>Zero-touch auto-save <span>Coming soon</span></h3><p>Encrypt and version secrets while you work, with provider-aware validation.</p></div></article>
+                        <article><span class="roadmap-number">02</span><div><h3>Hardware security <span>Enterprise</span></h3><p>Delegate master-key operations to hardware-backed security modules.</p></div></article>
+                        <article><span class="roadmap-number">03</span><div><h3>Multi-factor access <span>Preview</span></h3><p>Require a second factor before the local vault can be decrypted.</p></div></article>
                     </div>
                 </section>
             </main>

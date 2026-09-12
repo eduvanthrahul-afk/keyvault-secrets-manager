@@ -1,6 +1,8 @@
+// Keep local development requests stable even when the HTML is opened from a
+// file path, Live Server, or another preview port.
 const API_URL = (typeof window !== 'undefined' && window.location.port === '8080')
     ? ''
-    : `http://${(typeof window !== 'undefined' && window.location.hostname) || 'localhost'}:8080`;
+    : 'http://localhost:8080';
 
 // XSS Shield: Global HTML Entity Escaping Utility
 const esc = (str) => {

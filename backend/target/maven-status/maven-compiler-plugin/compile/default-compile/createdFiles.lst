@@ -19,7 +19,6 @@ com\apimanager\keyvault\service\OtpService.class
 com\apimanager\keyvault\dto\JwtResponse.class
 com\apimanager\keyvault\dto\MachineTokenRequest.class
 com\apimanager\keyvault\security\AuthTokenFilter.class
-com\apimanager\keyvault\security\SecurityConfig$1.class
 com\apimanager\keyvault\security\JwtUtils.class
 com\apimanager\keyvault\service\AuditService.class
 com\apimanager\keyvault\service\TeamService.class

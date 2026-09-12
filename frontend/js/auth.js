@@ -1,5 +1,7 @@
 // auth.js
 document.addEventListener('DOMContentLoaded', () => {
+    // Local testing switch. Set to true to restore the normal email OTP step.
+    const OTP_REQUIRED = false;
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
 
@@ -79,38 +81,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                notifications.showToast('Identity Verification', 'Dispatched code to ' + email, 'info');
-                await ApiClient.auth.requestOtp(email);
-
                 // Store details for final step
                 pendingRegistration = { email, password };
 
-                // Show Modal
-                otpModal.style.display = 'flex';
-                otpInput.focus();
+                if (OTP_REQUIRED) {
+                    notifications.showToast('Identity Verification', 'Dispatched code to ' + email, 'info');
+                    await ApiClient.auth.requestOtp(email);
+                    otpModal.style.display = 'flex';
+                    otpInput.focus();
+                } else {
+                    notifications.showToast('Test Mode', 'Creating your vault without email verification.', 'info');
+                    await finalizeRegistration(true);
+                }
             } catch (err) {
                 notifications.showToast('Verification Failed', err.message, 'error');
             }
         });
 
-        const finalizeRegistration = async () => {
+        const finalizeRegistration = async (skipOtp = false) => {
             if (!pendingRegistration) return;
             const { email, password } = pendingRegistration;
             const code = otpInput.value.trim();
 
-            if (code.length !== 6) {
+            if (!skipOtp && code.length !== 6) {
                 notifications.showToast('Entry Error', 'Please enter the full 6-digit code.', 'warning');
                 return;
             }
 
             try {
-                verifyOtpBtn.disabled = true;
-                verifyOtpBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+                if (!skipOtp) {
+                    verifyOtpBtn.disabled = true;
+                    verifyOtpBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
 
-                // 1. Verify OTP with Server
-                await ApiClient.auth.verifyOtp(email, code);
+                    // 1. Verify OTP with Server
+                    await ApiClient.auth.verifyOtp(email, code);
+                }
 
-                notifications.showToast('Success', 'Email verified. Provisioning security vault...', 'success');
+                notifications.showToast('Success', 'Provisioning security vault...', 'success');
 
                 // 2. Proceed with Zero-Knowledge Crypto
                 const salt = CryptoModule.generateSalt();
