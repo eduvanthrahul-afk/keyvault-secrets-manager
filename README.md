@@ -119,7 +119,24 @@ kv get DATABASE_URL
 kv doctor                              # exit code 2 on critical findings
 ```
 
-## Deploy
+## Self-host in one command
+
+On any Linux server or Mac with Docker:
+
+```bash
+curl -fsSL https://github.com/eduvanthrahul-afk/keyvault-secrets-manager/releases/latest/download/install.sh | bash
+```
+
+The installer asks for your domain, generates the database password and server key, and starts KeyVault, PostgreSQL and [Caddy](https://caddyserver.com) (automatic HTTPS from Let's Encrypt). Point the domain's DNS at the server and open ports 80 and 443 first. Answer `localhost` to try it on your own machine at http://localhost:8080.
+
+- **Non-interactive:** `curl -fsSL …/install.sh | KEYVAULT_DOMAIN=vault.example.com bash`
+- **Upgrade:** run the same command again. Your `.env` (and keys) are kept.
+- **Back up** `~/keyvault/.env` and the database: `docker compose exec db pg_dump -U keyvault keyvault > backup.sql`
+- **Docker image only:** `ghcr.io/eduvanthrahul-afk/keyvault-secrets-manager:latest` (amd64 and arm64)
+
+**CLI:** `npm install -g https://github.com/eduvanthrahul-afk/keyvault-secrets-manager/releases/latest/download/keyvault-cli.tgz`
+
+## Deploy from source
 
 One container serves both the API and the UI (same origin, so no CORS). You need PostgreSQL and HTTPS.
 
@@ -129,7 +146,9 @@ docker compose up -d
 docker compose --profile monitoring up -d   # optional Prometheus + Grafana dashboard
 ```
 
-It runs on free tiers: a Docker web service (Render, Koyeb, Fly.io) plus free PostgreSQL (Neon, Supabase). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#deployment).
+It runs on free tiers: a Docker web service (Render, Koyeb) plus free PostgreSQL (Neon, Supabase). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#deployment).
+
+**Releasing:** pushing a tag such as `v2.0.0` runs [`release.yml`](.github/workflows/release.yml), which publishes the Docker image to GHCR and a GitHub Release containing `install.sh`, the compose bundle and the CLI.
 
 ## Testing
 

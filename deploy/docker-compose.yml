@@ -1,0 +1,61 @@
+# KeyVault self-host bundle. Normally installed by install.sh, which writes .env next to this file.
+#
+#   HTTPS mode (a domain pointing at this server): COMPOSE_PROFILES=https in .env, then docker compose up -d
+#   Local mode (just this machine, http://localhost:8080):  docker compose up -d
+#
+# Upgrade: change KEYVAULT_VERSION in .env (or keep "latest"), then
+#   docker compose pull && docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keyvault
+      POSTGRES_USER: keyvault
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keyvault"]
+      interval: 5s
+      retries: 10
+
+  app:
+    image: ${KEYVAULT_IMAGE:-ghcr.io/eduvanthrahul-afk/keyvault-secrets-manager}:${KEYVAULT_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    # Loopback only. In HTTPS mode Caddy reaches the app over the internal network.
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/keyvault
+      DATABASE_USERNAME: keyvault
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      KEYVAULT_SERVER_KEY: ${KEYVAULT_SERVER_KEY:?set KEYVAULT_SERVER_KEY in .env}
+      KEYVAULT_APP_ORIGIN: ${KEYVAULT_APP_ORIGIN:-http://localhost:8080}
+      KEYVAULT_REGISTRATION_ENABLED: ${KEYVAULT_REGISTRATION_ENABLED:-true}
+      FORWARD_HEADERS_STRATEGY: ${FORWARD_HEADERS_STRATEGY:-none}
+      KEYVAULT_SECURE_COOKIE: ${KEYVAULT_SECURE_COOKIE:-true}
+      KEYVAULT_SESSION_COOKIENAME: ${KEYVAULT_SESSION_COOKIENAME:-__Host-kv_session}
+      KEYVAULT_METRICS_TOKEN: ${KEYVAULT_METRICS_TOKEN:-}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+
+  # Automatic HTTPS (Let's Encrypt). Needs ports 80 and 443 open and DNS pointing here.
+  caddy:
+    image: caddy:2.8-alpine
+    profiles: [https]
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      KEYVAULT_DOMAIN: ${KEYVAULT_DOMAIN:?set KEYVAULT_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
