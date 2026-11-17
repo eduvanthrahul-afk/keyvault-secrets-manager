@@ -77,4 +77,9 @@ jobs:
           npm install -g https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/keyvault-cli.tgz
           \`\`\`
           EOF
-          gh release create "$GITHUB_REF_NAME" out/* --title "KeyVault $GITHUB_REF_NAME" --notes-file notes.md --generate-notes
+          # Re-running for an existing tag (e.g. after re-pushing it) refreshes the assets instead of failing.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" out/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" out/* --title "KeyVault $GITHUB_REF_NAME" --notes-file notes.md --generate-notes
+          fi
