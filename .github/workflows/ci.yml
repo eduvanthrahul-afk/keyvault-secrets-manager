@@ -41,11 +41,13 @@ jobs:
         with: { distribution: temurin, java-version: 21, cache: maven }
       - run: npm ci
       - run: npm run build:web && npm run build:cli
+      # Plain-HTTP CI server: headless Chromium on Linux won't store Secure/__Host- cookies over
+      # http://localhost, so CI uses a plain cookie. Production (HTTPS) keeps __Host- + Secure.
       - name: Start server (embedded PostgreSQL)
         working-directory: apps/server
         run: |
           chmod +x mvnw
-          nohup ./mvnw -q -B spring-boot:test-run -Dspring-boot.run.arguments="--keyvault.app-origin=http://localhost:8080" > server.log 2>&1 &
+          nohup ./mvnw -q -B spring-boot:test-run -Dspring-boot.run.arguments="--keyvault.app-origin=http://localhost:8080 --keyvault.session.secure-cookie=false --keyvault.session.cookie-name=kv_session" > server.log 2>&1 &
           for i in $(seq 1 90); do curl -sf http://localhost:8080/actuator/health && break; sleep 2; done
       - run: npm run e2e
       - run: npx playwright install --with-deps chromium
