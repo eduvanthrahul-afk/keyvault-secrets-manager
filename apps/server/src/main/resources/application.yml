@@ -1,0 +1,71 @@
+# All secrets come from environment variables. See /.env.example.
+spring:
+  application:
+    name: keyvault
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/keyvault}
+    username: ${DATABASE_USERNAME:keyvault}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_SIZE:5}
+  flyway:
+    enabled: true
+  threads:
+    virtual:
+      enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    problemdetails:
+      enabled: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+server:
+  port: ${PORT:8080}
+  # Set to "framework" ONLY when running behind a trusted reverse proxy (Render, Fly, Nginx),
+  # otherwise clients could spoof X-Forwarded-For to dodge rate limits.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+  shutdown: graceful
+  compression:
+    enabled: true
+  error:
+    include-stacktrace: never
+    include-message: never
+  servlet:
+    session:
+      tracking-modes: cookie
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: keyvault
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+keyvault:
+  app-origin: ${KEYVAULT_APP_ORIGIN:http://localhost:8080}
+  server-key: ${KEYVAULT_SERVER_KEY:}
+  registration-enabled: ${KEYVAULT_REGISTRATION_ENABLED:true}
+  # Bearer token for GET /actuator/prometheus. Empty = metrics endpoint locked.
+  metrics-token: ${KEYVAULT_METRICS_TOKEN:}
+  session:
+    secure-cookie: ${KEYVAULT_SECURE_COOKIE:true}
+    idle-timeout: ${KEYVAULT_SESSION_IDLE:30m}
+    absolute-timeout: ${KEYVAULT_SESSION_MAX:12h}
+
+logging:
+  level:
+    root: INFO

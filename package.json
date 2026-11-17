@@ -1,0 +1,27 @@
+{
+  "name": "keyvault",
+  "private": true,
+  "version": "2.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/web",
+    "apps/cli"
+  ],
+  "scripts": {
+    "test": "npm run test -w @keyvault/crypto && npm run test -w @keyvault/cli",
+    "build:web": "npm run build -w @keyvault/web",
+    "build:cli": "npm run build -w @keyvault/cli",
+    "dev:web": "npm run dev -w @keyvault/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "e2e": "esbuild scripts/e2e.ts --bundle --platform=node --format=esm --outfile=scripts/.e2e.mjs --log-level=warning && node scripts/.e2e.mjs",
+    "dev:server": "cd apps/server && ./mvnw spring-boot:test-run",
+    "test:ui": "playwright test",
+    "load:seed": "esbuild scripts/load/seed.ts --bundle --platform=node --format=esm --outfile=scripts/load/.seed.mjs --log-level=warning && node scripts/load/.seed.mjs",
+    "load:bench": "esbuild scripts/load/bench.ts --bundle --platform=node --format=esm --outfile=scripts/load/.bench.mjs --log-level=warning && node scripts/load/.bench.mjs",
+    "load:k6": "k6 run scripts/load/k6.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "esbuild": "0.24.0"
+  }
+}

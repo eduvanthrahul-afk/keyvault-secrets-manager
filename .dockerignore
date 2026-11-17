@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/target
+**/.data
+apps/server/src/main/resources/static
+.git
+scripts/.e2e.mjs

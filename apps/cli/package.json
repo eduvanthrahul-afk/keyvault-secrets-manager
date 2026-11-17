@@ -1,0 +1,22 @@
+{
+  "name": "@keyvault/cli",
+  "version": "2.0.0",
+  "description": "KeyVault CLI: inject end-to-end encrypted secrets into any process",
+  "private": true,
+  "type": "module",
+  "bin": { "kv": "./dist/kv.mjs" },
+  "files": ["dist"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/kv.mjs --banner:js=\"#!/usr/bin/env node\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@keyvault/crypto": "2.0.0",
+    "@types/node": "22.9.0",
+    "esbuild": "0.24.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

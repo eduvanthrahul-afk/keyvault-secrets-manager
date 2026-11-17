@@ -1,0 +1,59 @@
+# Self-hosted KeyVault: `cp .env.example .env`, fill it in, then `docker compose up -d`.
+# Put a TLS-terminating proxy (Caddy, Traefik, Cloudflare Tunnel) in front: the session
+# cookie is Secure-only and browsers require HTTPS for it outside localhost.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keyvault
+      POSTGRES_USER: keyvault
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keyvault"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/keyvault
+      DATABASE_USERNAME: keyvault
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      KEYVAULT_SERVER_KEY: ${KEYVAULT_SERVER_KEY:?generate with: openssl rand -base64 32}
+      KEYVAULT_APP_ORIGIN: ${KEYVAULT_APP_ORIGIN:-http://localhost:8080}
+      KEYVAULT_REGISTRATION_ENABLED: ${KEYVAULT_REGISTRATION_ENABLED:-true}
+      FORWARD_HEADERS_STRATEGY: ${FORWARD_HEADERS_STRATEGY:-none}
+      KEYVAULT_METRICS_TOKEN: ${KEYVAULT_METRICS_TOKEN:-}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+
+  # Optional: `docker compose --profile monitoring up -d`, then Grafana on http://localhost:3000
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    profiles: [monitoring]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/metrics-token:/etc/prometheus/metrics-token:ro
+    depends_on: [app]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: [monitoring]
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
+
+volumes:
+  pgdata:

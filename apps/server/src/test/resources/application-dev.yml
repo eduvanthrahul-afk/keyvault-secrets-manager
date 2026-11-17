@@ -1,0 +1,9 @@
+# Local development only (used by DevServer). NEVER use this server key anywhere real.
+keyvault:
+  app-origin: http://localhost:5173
+  server-key: ZGV2LW9ubHktc2VydmVyLWtleS1kby1ub3QtdXNlLWluLXByb2Q=
+  rate-limit:
+    enabled: false   # convenient while developing; always on in production
+  webhooks:
+    allow-http: true
+    allow-private-networks: true

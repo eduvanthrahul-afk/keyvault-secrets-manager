@@ -1,0 +1,10 @@
+keyvault:
+  app-origin: http://localhost:8080
+  server-key: dGVzdC1vbmx5LXNlcnZlci1rZXktMzItYnl0ZXMtbG9uZw==
+  rate-limit:
+    enabled: false
+  metrics-token: test-metrics-token
+  webhooks:
+    allow-http: true
+    allow-private-networks: true
+    poll-interval: PT0.2S
