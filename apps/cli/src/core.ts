@@ -1,5 +1,7 @@
 // Fetch + decrypt logic, separated from the CLI entry point so it can be unit tested.
+import { writeFileSync } from 'node:fs';
 import {
+  analyzeHealth,
   decryptSecret,
   parseServiceToken,
   resolveReferences,
@@ -109,3 +111,55 @@ export function resolveAll(secrets: SecretPlaintext[]): SecretPlaintext[] {
     return { name: s.name, value: r.value };
   });
 }
+
+/** Secret names only, one per line. Values are never included. */
+export function formatNames(secrets: SecretPlaintext[]): string {
+  return secrets.length ? secrets.map((s) => s.name).join('\n') + '\n' : '';
+}
+
+/**
+ * Write an export to a file. Refuses to overwrite an existing file unless force is set.
+ * New files are created with mode 0600 (owner-only; Windows ignores POSIX modes).
+ */
+export function writeSecretFile(path: string, content: string, force = false): void {
+  try {
+    writeFileSync(path, content, { flag: force ? 'w' : 'wx', mode: 0o600 });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new CliError(`${path} already exists. Use --force to overwrite it.`);
+    }
+    throw e;
+  }
+}
+
+/** Describe what `kv run` would inject and run, without starting the process. Names only, never values. */
+export function dryRunText(command: string[], secrets: SecretPlaintext[], parent: NodeJS.ProcessEnv, override = true): string {
+  const names = secrets.filter((s) => override || parent[s.name] === undefined).map((s) => s.name);
+  return `would inject ${names.length} secret(s): ${names.join(', ') || '(none)'}\ncommand: ${command.join(' ')}\n(dry run: process not started)\n`;
+}
+
+/** JSON report for `kv doctor --json`. */
+export function doctorJson<F extends { severity: string }>(environment: string, score: number, findings: F[]): string {
+  return JSON.stringify({ score, environment, findings }, null, 2) + '\n';
+}
+
+export type FailOn = 'critical' | 'warning';
+
+/** Parse --fail-on. Defaults to critical-only, matching the previous behaviour. */
+export function parseFailOn(value: string | undefined): FailOn {
+  if (value === undefined) return 'critical';
+  if (value === 'critical' || value === 'warning') return value;
+  throw new CliError(`Invalid --fail-on "${value}". Use critical or warning.`);
+}
+
+function severityRank(sev: string): number {
+  return sev === 'critical' ? 2 : sev === 'warning' ? 1 : 0;
+}
+
+/** True when any finding is at or above the failOn severity. */
+export function shouldFail(findings: ReadonlyArray<{ severity: string }>, failOn: FailOn): boolean {
+  return findings.some((f) => severityRank(f.severity) >= severityRank(failOn));
+}
+
+export type HealthReport = ReturnType<typeof analyzeHealth>;
+

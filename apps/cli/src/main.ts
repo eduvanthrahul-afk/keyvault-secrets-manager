@@ -1,18 +1,24 @@
 import { launch } from './spawn';
 import { parseArgs } from 'node:util';
 import { analyzeHealth } from '@keyvault/crypto';
-import { buildEnv, CliError, fetchEnvironment, format, resolveAll } from './core';
+import { buildEnv, CliError, dryRunText, doctorJson, fetchEnvironment, format, formatNames, parseFailOn, resolveAll, shouldFail, writeSecretFile } from './core';
 
 const HELP = `kv: KeyVault CLI
 
 Secrets are fetched as ciphertext and decrypted locally with your access token.
 
 Usage:
-  kv run [--no-override] -- <command> [args...]   Run a command with secrets as env vars
-  kv export [--format dotenv|json|shell]          Print secrets (default: dotenv)
+  kv run [--no-override] [--dry-run] -- <command> [args...]   Run a command with secrets as env vars
+                                                  (--dry-run prints the injected names and command, and does not start it)
+  kv list                                         Print secret names only (never values)
+  kv export [--format dotenv|json|shell] [--out <file> [--force]]
+                                                  Print secrets (default: dotenv), or write them to a file
+                                                  (created with mode 0600; --force overwrites an existing file)
   kv get <NAME>                                   Print one secret's value
   kv whoami                                       Show which project/environment the token reads
-  kv doctor                                       Check secrets for leaks, weak values, broken references
+  kv doctor [--json] [--fail-on critical|warning] Check secrets for leaks, weak values, broken references
+                                                  (--json prints a JSON report; exit code 2 on critical findings,
+                                                  or on warnings too with --fail-on warning)
 
 Values may reference other secrets (\${HOST}:\${PORT}); they are resolved locally before use.
 
@@ -33,6 +39,11 @@ async function main(argv: string[]): Promise<number> {
       url: { type: 'string' },
       format: { type: 'string', short: 'f', default: 'dotenv' },
       'no-override': { type: 'boolean', default: false },
+      'dry-run': { type: 'boolean', default: false },
+      out: { type: 'string' },
+      force: { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
+      'fail-on': { type: 'string' },
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean', short: 'v' },
     },
@@ -51,10 +62,18 @@ async function main(argv: string[]): Promise<number> {
     case 'run': {
       const command = child.length ? child : rest;
       if (!command.length) throw new CliError('Usage: kv run -- <command> [args...]');
-      return run(command, buildEnv(process.env, values(), !opts['no-override']));
+      const override = !opts['no-override'];
+      if (opts['dry-run']) return out(dryRunText(command, values(), process.env, override));
+      return run(command, buildEnv(process.env, values(), override));
     }
-    case 'export':
-      return out(format(values(), opts.format!));
+    case 'list':
+      return out(formatNames(env.secrets));
+    case 'export': {
+      const text = format(values(), opts.format!);
+      if (!opts.out) return out(text);
+      writeSecretFile(opts.out, text, opts.force);
+      return 0;
+    }
     case 'get': {
       const name = rest[0];
       if (!name) throw new CliError('Usage: kv get <NAME>');
@@ -65,15 +84,20 @@ async function main(argv: string[]): Promise<number> {
     case 'whoami':
       return out(`project:     ${env.projectId}\nenvironment: ${env.environmentName} (${env.environmentId})\nsecrets:     ${env.secrets.length}\n`);
     case 'doctor': {
+      const failOn = parseFailOn(opts['fail-on']);
       const { score, findings } = analyzeHealth([{ slug: env.environmentSlug, name: env.environmentName, secrets: env.secrets }]);
-      const icon = { critical: 'x', warning: '!', info: '-' } as const;
-      let text = `${env.environmentName}: health ${score}/100, ${findings.length} finding(s)
+      if (opts.json) {
+        out(doctorJson(env.environmentName, score, findings));
+      } else {
+        const icon = { critical: 'x', warning: '!', info: '-' } as const;
+        let text = `${env.environmentName}: health ${score}/100, ${findings.length} finding(s)
 `;
-      for (const f of findings) text += `  [${icon[f.severity]}] ${f.secret}: ${f.message}
+        for (const f of findings) text += `  [${icon[f.severity]}] ${f.secret}: ${f.message}
       ${f.fix}
 `;
-      out(text);
-      return findings.some((f) => f.severity === 'critical') ? 2 : 0;
+        out(text);
+      }
+      return shouldFail(findings, failOn) ? 2 : 0;
     }
     default:
       throw new CliError(`Unknown command "${cmd}". Run kv --help.`);
