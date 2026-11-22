@@ -1,6 +1,11 @@
 import { createServiceToken, encryptSecret, generateEnvironmentKey, newId } from '@keyvault/crypto';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assertSafeUrl, buildEnv, fetchEnvironment, format } from '../src/core';
+import {
+  assertSafeUrl, buildEnv, doctorJson, dryRunText, fetchEnvironment, format, formatNames, parseFailOn, shouldFail, writeSecretFile,
+} from '../src/core';
 
 function fakeServer(tamper = false) {
   const ref = { projectId: newId(), environmentId: newId() };
@@ -67,3 +72,73 @@ describe('windows spawning', () => {
     expect(r?.toLowerCase()).toContain('npm.cmd');
   });
 });
+
+describe('cli commands', () => {
+  it('kv list prints secret names only, one per line, never values', async () => {
+    const srv = fakeServer();
+    const env = await fetchEnvironment('http://localhost:8080', srv.token, srv.impl);
+    const text = formatNames(env.secrets);
+    expect(text).toBe('DATABASE_URL\nAPI_KEY\n');
+    expect(text).not.toContain('postgres://');
+    expect(text).not.toContain('abc');
+  });
+
+  it('kv export --out writes the file and refuses to overwrite it without --force', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kv-export-'));
+    try {
+      const file = join(dir, '.env');
+      writeSecretFile(file, 'A=1\n');
+      expect(readFileSync(file, 'utf8')).toBe('A=1\n');
+      expect(() => writeSecretFile(file, 'A=2\n')).toThrow(/--force/);
+      expect(readFileSync(file, 'utf8')).toBe('A=1\n');
+      writeSecretFile(file, 'A=2\n', true);
+      expect(readFileSync(file, 'utf8')).toBe('A=2\n');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // Windows ignores POSIX permission bits, so this only runs on POSIX hosts.
+  it.skipIf(process.platform === 'win32')('kv export --out creates the file with mode 0600', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kv-export-'));
+    try {
+      const file = join(dir, '.env');
+      writeSecretFile(file, 'A=1\n');
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('kv doctor --json prints JSON with score, environment and findings keys', () => {
+    const findings = [{ severity: 'warning', secret: 'API_KEY', message: 'weak value', fix: 'rotate it' }];
+    const parsed = JSON.parse(doctorJson('Production', 80, findings));
+    expect(Object.keys(parsed).sort()).toEqual(['environment', 'findings', 'score']);
+    expect(parsed.environment).toBe('Production');
+    expect(parsed.score).toBe(80);
+    expect(parsed.findings).toEqual(findings);
+  });
+
+  it('kv doctor --fail-on warning fails on a warning finding, the default does not', () => {
+    const warn = [{ severity: 'warning' }];
+    // main.ts maps shouldFail(...) to exit code 2; these helpers drive that branch.
+    expect(shouldFail(warn, parseFailOn('warning'))).toBe(true);
+    expect(shouldFail(warn, parseFailOn(undefined))).toBe(false);
+  });
+
+  it('kv doctor rejects an unknown --fail-on value', () => {
+    expect(() => parseFailOn('bogus')).toThrow(/Invalid --fail-on/);
+  });
+
+  it('kv run --dry-run prints secret names and the command, never values', async () => {
+    const srv = fakeServer();
+    const env = await fetchEnvironment('http://localhost:8080', srv.token, srv.impl);
+    // dryRunText is the pure helper behind the --dry-run branch; main.ts returns before run()/launch() is called.
+    const text = dryRunText(['node', 'app.js'], env.secrets, {});
+    expect(text).toContain('would inject 2 secret(s): DATABASE_URL, API_KEY');
+    expect(text).toContain('command: node app.js');
+    expect(text).not.toContain('postgres://');
+    expect(text).not.toContain('abc');
+  });
+});
+
